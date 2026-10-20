@@ -2,16 +2,20 @@
 'use strict';
 import * as fs from 'fs';
 import { cursor } from 'uci';
-import { fail, key, ipv4, accumulate, options_equal, valid_section, network_profile, IFACE, PORT } from './core.uc';
+import { fail, key, ipv4, accumulate, options_equal, valid_section, network_profile, valid_interface } from './core.uc';
 
 function shellquote(value) { return "'" + replace('' + value, "'", "'\\''") + "'"; }
 
 // Test paths can be supplied by an importing test. No RPC/CLI argument or
-// environment variable is ever forwarded here in production.
+// environment variable is forwarded here in production. RPC may supply only a validated interface name.
 function platform(options) {
 	options ??= {};
-	const data = options.data_dir ?? '/etc/wgmanager';
-	const run = options.runtime_dir ?? '/var/run/wgmanager';
+	const base_data = options.data_dir ?? '/etc/wgmanager';
+	const base_run = options.runtime_dir ?? '/var/run/wgmanager';
+	let data = base_data, run = base_run, IFACE = options.interface ?? '';
+	if (type(IFACE) != 'string' || (IFACE != '' && !valid_interface(IFACE)))
+		fail('INVALID_INTERFACE', '接口名称无效，须为 1–15 个安全字符');
+	let inventory = [];
 	const conf = options.confdir ?? '/etc/config';
 	const wg = options.wg_binary ?? '/usr/bin/wg';
 	const ip = options.ip_binary ?? '/sbin/ip';
@@ -173,8 +177,31 @@ function platform(options) {
 		fs.rmdir(savedir);
 	}
 
+	function discover_interfaces() {
+		let found = {}, savedir = private_dir(base_run + '/discover-'), ctx;
+		try {
+			ctx = cursor(conf, savedir);
+			if (!ctx.load('network')) fail('UCI_READ_FAILED', '无法解析现有网络配置');
+			ctx.foreach('network', 'interface', (section) => {
+				let name = section['.name'];
+				if (section.proto == 'wireguard' && valid_interface(name)) found[name] = {
+					name, configured: true, up: false, addresses: list_value(section.addresses) };
+			});
+			ctx.unload('network');
+		}
+		catch (e) { ctx?.unload('network'); fs.rmdir(savedir); die(e.message); }
+		fs.rmdir(savedir);
+		let live = trim(capture([wg, 'show', 'interfaces'], null, 8192));
+		for (let name in split(live, /[[:space:]]+/)) if (valid_interface(name)) {
+			found[name] ??= { name, configured: false, addresses: [] };
+			found[name].up = true;
+		}
+		return map(sort(keys(found)), name => found[name]);
+	}
+
 	function snapshot() {
-		let result = { interface: IFACE, up: false, proto: '', addresses: [], runtime_addresses: [], lan_addresses: [], lan_netmask: '', uci_peers: [], peers: {}, route_ok: false };
+		let result = { interface: IFACE, interfaces: inventory, selection_required: IFACE == '', up: false, proto: '', addresses: [], runtime_addresses: [], lan_addresses: [], lan_netmask: '', uci_peers: [], peers: {}, route_ok: false, missing_routes: [] };
+		if (IFACE == '') return result;
 		// A separate savedir prevents applying unrelated LuCI/CLI staged changes.
 		secure_dir(run);
 		let savedir = private_dir(run + '/uci-');
@@ -222,9 +249,15 @@ function platform(options) {
 		}
 		let route = capture([ip, '-4', 'route', 'show', 'dev', IFACE], null, 16384), pool = null;
 		try { pool = network_profile(result); } catch (e) {}
-		if (pool) for (let line in split(route, '\n')) {
-			let fields = split(trim(line), /[[:space:]]+/);
-			if (fields[0] == pool.subnet) result.route_ok = true;
+		if (pool) {
+			let routes = [];
+			for (let line in split(route, '\n')) {
+				let fields = split(trim(line), /[[:space:]]+/);
+				// Only a directly attached route on this device satisfies the pool check.
+				if (index(fields, 'via') < 0) push(routes, fields[0]);
+			}
+			result.missing_routes = filter(pool.subnets, subnet => index(routes, subnet) < 0);
+			result.route_ok = length(result.missing_routes) == 0;
 		}
 		return result;
 	}
@@ -280,10 +313,23 @@ function platform(options) {
 		return ledger;
 	}
 
+	secure_dir(base_data); secure_dir(base_run);
+	inventory = discover_interfaces();
+	if (IFACE == '' && length(inventory) == 1) IFACE = inventory[0].name;
+	// No configured interface remains a readable, blocked wg placeholder for first install.
+	if (IFACE == '' && !length(inventory)) IFACE = 'wg';
+	if (IFACE != '' && IFACE != 'wg') {
+		secure_dir(base_data + '/interfaces'); secure_dir(base_run + '/interfaces');
+		data = base_data + '/interfaces/' + IFACE; run = base_run + '/interfaces/' + IFACE;
+		secure_dir(data); secure_dir(run);
+	}
+
 	return {
+		interface: IFACE, interfaces: inventory,
 		lock: function() {
 			secure_dir(run);
-			let path = run + '/lock';
+			// Serialize across interfaces: their targeted UCI edits share one network file.
+			let path = base_run + '/lock';
 			if (fs.lstat(path)) safe_file(path, 128, false);
 			lock_handle = fs.open(path, 'ae', 384);
 			if (!lock_handle || !lock_handle.lock('xn')) fail('BUSY', '另一个管理或采样操作正在进行，请稍后重试');

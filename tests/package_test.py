@@ -62,7 +62,7 @@ with tarfile.open(fileobj=io.BytesIO(data_bytes), mode='r:gz') as data:
     check(all(x not in readonly for x in ['ctx.set(', 'ctx.commit(', 'ctx.save(', 'ctx.delete(']) and "ctx.set('network', section, name, next.uci_options[name])" in writer and "ctx.commit('network')" in writer and 'valid_section(section)' in writer and "current['.type'] != 'wireguard_' + IFACE" in writer, 'UCI writes are isolated to a validated selected WireGuard peer section')
     check("[wg, 'set', IFACE, 'peer', pub]" in platform and all(x not in platform for x in ["'setconf'", "'syncconf'", "'ifup'", "'ifdown'", "'nft'", "'iptables'"]), 'live updates use a single peer, with no interface/firewall reset commands')
     hook = read('etc/hotplug.d/iface/95-wgmanager')
-    check('[ "$ACTION" = ifup ] && [ "$INTERFACE" = wg ]' in hook and '/usr/sbin/wgmanager restore' in hook, 'hotplug restores only after the existing wg interface is up')
+    check('[ "$ACTION" = ifup ]' in hook and '--interface "$INTERFACE" restore' in hook, 'hotplug restores only the interface named by the native ifup event')
     check('/etc/wgmanager/' in read('lib/upgrade/keep.d/wgmanager'), 'private plugin state is included in normal sysupgrade preservation')
 
 print(f'PASS {count} package/archive/safety checks; target opkg installation not yet verified')

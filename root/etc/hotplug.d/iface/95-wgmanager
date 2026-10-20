@@ -1,6 +1,6 @@
 #!/bin/sh
-# Never bring interfaces up or down. Only restore plugin-owned peers AFTER
-# netifd has brought the existing interface up of its own accord.
-[ "$ACTION" = ifup ] && [ "$INTERFACE" = wg ] || exit 0
-/usr/sbin/wgmanager restore >/dev/null 2>&1 ||
-	logger -t wgmanager 'Managed peers not restored; inspect with wgmanager doctor'
+# Only restore plugin peers after netifd brings this WireGuard interface up.
+[ "$ACTION" = ifup ] && [ -n "$INTERFACE" ] || exit 0
+[ "$(uci -q get "network.$INTERFACE.proto")" = wireguard ] || exit 0
+/usr/sbin/wgmanager --interface "$INTERFACE" restore >/dev/null 2>&1 ||
+	logger -t wgmanager "Managed peers not restored on $INTERFACE; inspect doctor with --interface"

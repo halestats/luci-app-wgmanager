@@ -14,5 +14,5 @@ start_service() {
 }
 
 stop_service() {
-	/usr/sbin/wgmanager checkpoint >/dev/null 2>&1
+	/usr/sbin/wgmanager checkpoint-all >/dev/null 2>&1
 }

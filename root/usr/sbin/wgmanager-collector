@@ -2,7 +2,7 @@
 # Only this plugin's read-only sampler is started by its optional procd service.
 trap 'exit 0' TERM INT
 while :; do
-	/usr/sbin/wgmanager collect >/dev/null 2>&1
+	/usr/sbin/wgmanager collect-all >/dev/null 2>&1
 	sleep 10 &
 	wait "$!"
 done

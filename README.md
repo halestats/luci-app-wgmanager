@@ -1,89 +1,81 @@
 # WireGuard Manager · LuCI
 
-原生 LuCI + ucode WireGuard 客户端管理插件，面向 iStoreOS / OpenWrt 24.10 既有 `wg` 接口，支持中文界面、深浅主题、手机布局和客户端配置/二维码导出。
+原生 LuCI + ucode WireGuard 客户端管理插件，面向 iStoreOS / OpenWrt 24.10 已有的 WireGuard 接口。支持中文界面、深浅主题、手机布局、客户端管理及配置/二维码导出。
 
-**当前开发版本：0.4.0-1（预发布，尚待功能及设备验收） · Apache-2.0**
+**当前开发版本：0.5.0-1（预发布，待功能及设备验收） · Apache-2.0**
 
-[下载安装包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.4.0/luci-app-wgmanager_0.4.0-1_all.ipk) · [源码分享包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.4.0/luci-app-wgmanager-GitHub-0.4.0.zip) · [版本说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/RELEASE-0.4.0.md) · [常见问题](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [0.3.1 发布基线](https://github.com/halestats/luci-app-wgmanager/releases/tag/v0.3.1)
+[下载安装包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.5.0/luci-app-wgmanager_0.5.0-1_all.ipk) · [源码分享包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.5.0/luci-app-wgmanager-GitHub-0.5.0.zip) · [版本说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/RELEASE-0.5.0.md) · [常见问题](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [0.3.1 发布基线](https://github.com/halestats/luci-app-wgmanager/releases/tag/v0.3.1)
 
-## 0.4.0：跟随 wg 接口的地址池
+## 0.5.0：多网段和接口选择
 
-`192.168.66.1/24` 是推荐默认配置示例，**不再是管理条件**。插件读取 iStoreOS 中 `wg` 接口的实际主 IPv4 和前缀，后端校验、自动分配、状态概览和新增/编辑弹窗说明使用同一份网段数据。
+### 一个接口有两个 IPv4 地址
 
-| wg 接口配置示例 | 自动客户端地址范围 |
+插件读取所选接口的全部 IPv4/前缀，新增和编辑弹窗展示全部可用范围。示例：
+
+| 接口地址 | 客户端可用范围 |
 | --- | --- |
-| `192.168.66.1/24` | `192.168.66.2`–`192.168.66.254` |
 | `192.168.77.1/24` | `192.168.77.2`–`192.168.77.254` |
-| `10.8.0.1/24` | `10.8.0.2`–`10.8.0.254` |
-| `10.8.0.10/24` | `10.8.0.1`–`10.8.0.254`，排除服务端 `.10` |
+| `192.168.66.1/24` | `192.168.66.2`–`192.168.66.254` |
 
-自动分配还会避开网络地址、广播地址、接口其他 IPv4、已有客户端、禁用客户端和已有 AllowedIPs 覆盖的地址。支持 `/8`–`/30`；多个 IPv4 时取配置顺序中的第一个作为主网段，其他接口地址一并排除。IPv6 不作为本版地址池。
+手动填写可以选择任一范围；留空则按接口配置顺序寻找空闲地址，第一个网段无空闲时继续下一个。单个客户端仍只有一个 IPv4 `/32`。已有 `.66` 客户端只要仍属于任一已配置网段，就不会因 `.77` 排在第一而被标记为旧网段。
 
-> 修改接口 IP 仍由 iStoreOS 原生网络页面完成。插件不修改或重启接口；配置尚未应用到运行接口、直连路由缺失时会明确阻止写入，不会偷偷创建网络配置。
+排除每个网段的网络/广播地址、接口全部本地地址、已有及禁用客户端、UCI/运行 Peer 的 AllowedIPs。相同子网合并为一个池，重叠网段的边界也保留为不可分配地址。支持 `/8`–`/30`，每个接口最多 16 个不同 IPv4 网段、128 个管理客户端。
 
-## 导出路由模式
+### 接口可以不叫 wg
 
-- **自动跟随 wg 与 LAN 网段**：新安装默认启用；使用当前 `wg` 子网及可解析的原生 `network.lan` IPv4 子网，后续导出时随配置变化。LAN 未配置完整 IPv4/掩码时只加入 wg 子网，不猜测家庭网段。最多保留 16 条。
-- **自定义路由**：可填写实际内网 CIDR 或 `0.0.0.0/0`。旧版本已保存的路由升级后按自定义保留，避免覆盖用户选择；可在“导出设置”切换到自动模式。
+同时读取原生 UCI 中 `proto=wireguard` 的接口及实际 WireGuard 设备。只有一个时自动识别；多个且本页尚未选择时先显示选择提示。页面顶部可切换 `wg`、`wg0`、`vpn0` 等接口，当前浏览器标签页记住自己的选择。
 
-不再把 `192.168.95.0/24` 当作每台设备的默认 LAN。导出路由与地址池是两件事；路由变化只影响之后下载/扫码的配置，已导入的手机配置需同步修改或重新导入。
+概览名称、地址池、客户端列表、流量记录、导出设置、新增/编辑/启停/删除、恢复及导出文件名均跟随所选接口。导出端口读取该接口的实际 UDP 监听端口，不再固定为 51820；不替用户修改接口、防火墙、端口映射或 NAT。
 
-## 接口换网段后的旧客户端
+每个 RPC 都携带接口名。操作预览显示目标接口，预览绑定接口、端口、IPv4 和 LAN 配置；变化后必须重新预览。弹窗及操作期间锁住接口选择，切换后的旧轮询响应不会覆盖新接口数据。
 
-已有客户端不会被自动改号。旧网段记录保留并显示“地址需调整”，可以明确编辑到当前地址池、禁用或删除。编辑后仍要同步客户端设备地址；插件新建客户端可重新下载配置，原有客户端私钥未保存在服务端时不能恢复二维码。
+## 自动导出路由
 
-接口重建后的插件恢复流程跳过不属于当前地址池的旧记录，返回 `skipped_out_of_pool`。已不在运行接口中的旧网段客户端可以通过明确编辑迁移；事务记录其操作前实际未装载状态，失败回滚不重新添加原本缺失的 Peer。普通配置漂移仍会阻止写入。
+“自动跟随所选接口与 LAN 网段”使用所选接口**全部 IPv4 子网**及可解析的原生 `network.lan` IPv4 子网，去重后最多 64 项。上述两个地址加上 LAN `192.168.95.1/24` 时，AllowedIPs 为：
 
-尚未接管的原有 UCI 客户端依然受保护；接管要求每个原有客户端为当前池内的单一 IPv4 `/32`。这些记录需要先在原生配置中符合该条件，再显式接管。
-
-## 适用条件
-
-| 项目 | 当前范围 |
-| --- | --- |
-| 固件 | iStoreOS / OpenWrt 24.10 系列，opkg、LuCI、rpcd、ucode |
-| 接口 | 已配置并运行的 `wg`，UCI 协议为 WireGuard |
-| 服务端 IPv4 | 从接口读取，主地址为 `/8`–`/30` 内有效主机；`192.168.66.1/24` 仅为默认示例 |
-| 客户端地址池 | 按接口前缀推导，单个客户端地址为 `/32`，最多管理 128 个 |
-| 初次启用管理 | 支持 0 个、1 个、2 个及更多既有客户端 |
-| 监听端口 | 本版仍要求 UDP `51820`；端口可配置化不属于本次 IP 适配 |
-| IPv6 | 地址分配、DNS、导出路由仍只支持 IPv4，不能填 `::/0` |
-| 依赖 | luci-base、rpcd、ucode、ucode-mod-fs、ucode-mod-uci、wireguard-tools、qrencode |
-
-插件不负责从零创建 WireGuard 服务端、开放防火墙或配置 NAT。IPK 的 `all` 表示插件无架构专用二进制，不代表所有固件/硬件均已验证；依赖需由对应固件的软件源提供。
-
-## 安装和升级
-
-下载 IPK 并上传到 `/tmp`，按需更新匹配固件的软件源，然后：
-
-```sh
-opkg install /tmp/luci-app-wgmanager_0.4.0-1_all.ipk
-wgmanager doctor
+```text
+192.168.77.0/24, 192.168.66.0/24, 192.168.95.0/24
 ```
 
-核对 `version`、`health`、`network.server_address`、`network.subnet`、`pool_start`/`pool_end` 和 `out_of_pool_count`。升级已经启用管理的设备，无需重复启用或接管。安装不会替你修改 wg 地址。
+新安装默认自动模式；旧版手工保存的路由继续作为自定义保留。自定义可填写实际内网路由或 `0.0.0.0/0`。LAN 缺少有效前缀/掩码时不猜测网段。导出设置只影响之后下载的配置，已经导入手机的配置仍需同步修改或重新导入。
 
-新安装先检查已配置的接口和依赖，健康正常后执行：
+`192.168.66.1/24` 只是未配置时的展示示例，不能用默认示例启用管理。IPv6 地址池、DNS 和导出路由仍不支持，不能填 `::/0`。
 
-```sh
-wgmanager enable-management
-```
+## 安装或升级
 
-LuCI 入口为“服务 → WireGuard Manager”。填写导出设置后即可新增第一个客户端。默认只读，无客户端数量门槛。若页面 RPC 对象未注册，先检查脚本和 ubus；仅在需要时重启 rpcd，可能需要重新登录 LuCI：
+下载 IPK 上传至 `/tmp`，使用当前固件匹配的软件源补齐依赖，然后执行：
 
 ```sh
-/usr/libexec/rpcd/wgmanager list
-ubus list wgmanager
+opkg install /tmp/luci-app-wgmanager_0.5.0-1_all.ipk
 /etc/init.d/rpcd restart
-```
-
-### 可选：接管原有客户端
-
-```sh
-wgmanager manage-existing
 wgmanager doctor
 ```
 
-接管会先生成 root 私有的 `/etc/wgmanager/before-existing-*.json` 备份，再建立管理引用；接管本身不改变运行 Peer。备份含密钥，不可公开上传。接管后对所选客户端的编辑、启停、删除会同步持久化原 UCI Peer 配置；禁用/删除会断开所选客户端。
+**本版 RPC 增加 interface 参数，升级后需要重新加载 rpcd 的方法定义。** 上述命令只重启 LuCI 的 RPC 服务，可能需要重新登录；没有重启网络、WireGuard 或防火墙。之后强制刷新浏览器页面。
+
+LuCI 入口：“服务 → WireGuard Manager”。只有一个接口时自动显示；多个接口时在页面顶部选择。命令行可列出接口，并明确指定操作目标：
+
+```sh
+wgmanager interfaces
+wgmanager --interface wg doctor
+wgmanager --interface vpn0 doctor
+```
+
+已启用管理的原 `wg` 设备继续使用原记录，无需重复启用或接管。其他接口的记录独立，首次默认为只读；核对所选接口健康正常后：
+
+```sh
+wgmanager --interface vpn0 enable-management
+```
+
+多接口时，省略 `--interface` 的 doctor 只返回选择提示，写操作拒绝猜测目标。将 `vpn0` 换成自己的接口名。接口名限 1–15 个字母、数字、下划线、点或连字符，首字符为字母、数字或下划线；保留名称 `all`、`interfaces` 不支持。
+
+### 可选：接管所选接口的原有客户端
+
+```sh
+wgmanager --interface vpn0 manage-existing
+```
+
+无客户端数量门槛，支持从 0 个开始。接管先生成 root 私有备份，再引用对应 UCI Peer；接管本身不改变连接。原有客户端须为当前任一池内的单一 IPv4 `/32`。接管后编辑、禁用、启用、删除会持久化所选 Peer 配置。没有客户端原私钥时不能恢复完整配置或二维码。
 
 ### 可选：后台采样
 
@@ -92,42 +84,50 @@ wgmanager doctor
 /etc/init.d/wgmanager start
 ```
 
-后台每 10 秒采样、每 15 分钟保存，页面每 2 秒刷新。流量累计为尽力统计，不是计费数据；`stats.collector: false` 不影响 WireGuard 转发。
+每 10 秒逐个采样已识别接口，每 15 分钟保存各自累计，停止采样服务时逐接口 checkpoint。页面每 2 秒刷新；`collector: false` 不影响 WireGuard 转发。累计为尽力统计，不能用作计费数据。
 
-## 管理与恢复边界
+## 地址应用和迁移
 
-操作先预览再确认。预览绑定接口地址及 LAN 配置；预览后网络配置改变，需要重新预览。并发锁、服务端公钥固定、目标归属、漂移检查与事务机制继续保留。
+接口地址仍由 iStoreOS 原生“网络 → 接口”配置。**全部新地址须保存并应用到运行接口**，并有对应直连路由；否则锁住管理并指出未应用的地址。更改接口可能中断 VPN，远程管理时应先安排可靠的访问方式。
 
-插件新建客户端保存在 `/etc/wgmanager/state.json`，原有接管客户端仍保存于其 UCI 配置节。只更新所选 Peer，不重启网络、WireGuard、防火墙、OpenClash、Tailscale 或 Lucky，不自动改路由/NAT。
+从接口配置中移除某网段后，其中已有客户端会显示“地址需调整”；可以明确编辑到当前池、禁用或删除，随后同步设备配置。不会自动改号。恢复流程跳过所有当前池之外的插件记录，不重新添加旧地址。
 
-发生异常先保留私有文件并运行 `wgmanager doctor`，按诊断考虑 `wgmanager recover`；不要删除事务文件强行解锁。`wgmanager read-only` 可关闭写入并保留运行状态。
+## 数据和操作边界
 
-旧版本不理解自动路由模式和非原固定网段的记录，**不要直接降级并继续使用新状态**；先核对私有备份、未完成事务与之后的配置修改。卸载不会撤销原有 Peer 已保存的禁用或删除。
+原 `wg` 继续使用 `/etc/wgmanager/`，保留其旧状态、密钥、流量和备份；其他接口使用 `/etc/wgmanager/interfaces/<接口名>/`，运行数据同样按接口隔离。每个接口独立保存管理模式及固定服务端身份。
+
+**把接口重命名视为新目标，不自动搬迁旧名称的私钥或管理记录。** 原目录保留；若需迁移，请先保留私有备份并明确核对身份和客户端归属，不要删除旧目录“重置”。
+
+各接口共用写锁，避免同时提交同一 network 文件。插件只对明确接管的单个 Peer 配置节持久化；不修改服务端接口，不写路由/NAT/防火墙，不重启网络、OpenClash、Tailscale 或 Lucky。原生 ifup 事件只恢复该事件接口的插件客户端。
+
+异常先运行 `wgmanager --interface 接口名 doctor`。需要恢复时保留状态及事务，核对后执行对应接口的 recover；不要删除事务文件绕过锁定。`read-only` 关闭该接口的管理写入。旧包不理解新多接口数据及自动路由能力，不要直接降级并沿用新状态。
+
+## 适用环境
+
+需要 iStoreOS / OpenWrt 24.10 系列及 opkg、luci-base、rpcd、ucode、ucode-mod-fs、ucode-mod-uci、wireguard-tools、qrencode。已有并运行的接口须有原生 UCI WireGuard 配置。只有运行设备、没有对应 UCI 配置的接口可发现和查看，但不能管理。
+
+IPK 为 `all`，表示插件没有架构专用二进制，不代表所有固件或硬件已经验证。
 
 ## 界面演示
 
-![桌面布局示例](https://raw.githubusercontent.com/halestats/luci-app-wgmanager/main/docs/images/dashboard-desktop.png)
+[下载 0.5.0 离线交互预览](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.5.0/WireGuard-Manager-0.5.0-preview.html)，保存后用浏览器打开。演示包含 `wg` 的两个网段和 `vpn0` 的独立列表，全部为假数据，不连接路由器，演示配置不能用于连接。
 
-上图为 0.3.0 的历史布局示例，0.4.0 的新地址提示和路由模式以安装界面及新版离线预览为准。所有截图均为假数据。
+[历史桌面布局截图](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/images/dashboard-desktop.png) 属于 0.3.0；最新字段以本版安装界面和预览为准。
 
-[下载 0.4.0 离线交互预览](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.4.0/WireGuard-Manager-0.4.0-preview.html)，保存后用浏览器打开；不连接路由器。
-
-## 构建与验证范围
-
-使用 Python 3 构建，无需 OpenWrt SDK：
+## 构建与检查范围
 
 ```sh
 WGM_DIST="$PWD/dist" python3 scripts/build_ipk.py
 ```
 
-IPK SHA-256：`7c6a2fb8311d503c07f7b67d9bb541c3d9223fe85946a8f840ac0b9344201833`。
+IPK SHA-256：`629b2d02dd988deb2afc608804d17791069b56a749929a88fcac0ec9610c4fb8`。
 
-本次未新增或运行功能测试，未连接或修改用户路由器。历史 135 项检查属于 0.3.0，不能作为 0.4.0 的通过结论。本版作为预发布提供，具体静态检查记录见 [按版本记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)。
+本次执行静态语法/编译和文件核对，**没有新增或运行功能测试，也没有连接用户路由器验证 0.5.0**。不将旧版通过记录计入本版。以预发布提供，详见 [按版本检查记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)。
 
-[完整地址说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/ADDRESS-CONFIGURATION.md) · [FAQ](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [更新记录](https://github.com/halestats/luci-app-wgmanager/blob/main/CHANGELOG.md) · [安全设计](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/SECURITY-REVIEW.md)
+[地址与接口说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/ADDRESS-CONFIGURATION.md) · [FAQ](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [更新记录](https://github.com/halestats/luci-app-wgmanager/blob/main/CHANGELOG.md)
 
-## 反馈、许可证与致谢
+## 分享、反馈和许可证
 
-Issues 请提供版本、固件、脱敏后的 doctor 输出和复现步骤；不要上传私钥、PSK、二维码、完整客户端配置、原始 wg dump、state.json 或接管备份。
+请分享仓库或 Release 链接。反馈时提供版本、固件、脱敏 doctor 和复现步骤；不要公开私钥、PSK、二维码、完整客户端配置、原始 wg dump、state.json 或接管备份。
 
-采用 [Apache License 2.0](https://github.com/halestats/luci-app-wgmanager/blob/main/LICENSE)。界面布局参考 [wg-easy](https://github.com/wg-easy/wg-easy)，本项目原生实现于 LuCI/ucode，不属于 WireGuard、OpenWrt、iStoreOS 或 wg-easy 官方项目。
+采用 [Apache License 2.0](https://github.com/halestats/luci-app-wgmanager/blob/main/LICENSE)。布局参考 [wg-easy](https://github.com/wg-easy/wg-easy)，本项目是独立 LuCI/ucode 实现，不属于 WireGuard、OpenWrt、iStoreOS 或 wg-easy 官方项目。

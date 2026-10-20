@@ -63,7 +63,7 @@ def build():
                f'Depends: {", ".join(DEPENDS)}\nSection: luci\nPriority: optional\n'
                f'Maintainer: WireGuard Manager project\nLicense: Apache-2.0\n'
                f'Installed-Size: {installed}\n'
-               'Description: Native LuCI manager for the existing wg interface.\n'
+               'Description: Native LuCI manager for selected existing WireGuard interfaces.\n'
                ' Defaults to read-only; explicitly adopted original peers have targeted UCI persistence.\n')
     control_tar = archive([('./control', control.encode(), 0o644, False),
                            ('./prerm', (ROOT/'scripts/prerm').read_bytes(), 0o755, False)])

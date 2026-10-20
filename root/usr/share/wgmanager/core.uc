@@ -2,7 +2,7 @@
 // Pure policy/transaction code. The platform adapter owns all side effects.
 'use strict';
 
-const VERSION = '0.4.0';
+const VERSION = '0.5.0';
 const IFACE = 'wg';
 const PORT = 51820;
 const SUBNET = '192.168.66.0/24';
@@ -61,41 +61,66 @@ function ipv4_text(value) {
 		int(value / 256) % 256, value % 256);
 }
 
-// The first configured IPv4 is the pool source; reserve every local IPv4.
+// An interface may serve several IPv4 subnets. Keep configuration order for allocation.
+function valid_interface(name) {
+	return type(name) == 'string' && match(name, /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,14}$/) != null &&
+		name != 'all' && name != 'interfaces';
+}
+
 function network_profile(snapshot, allow_default) {
-	let first = null, excluded = [];
+	let servers = [], excluded = [], pools = [], subnets = [], reserved = [];
 	for (let address in snapshot?.addresses ?? []) {
-		if (type(address) != 'string') fail('UNSUPPORTED_NETWORK', 'wg 接口地址格式无效');
+		if (type(address) != 'string') fail('UNSUPPORTED_NETWORK', '接口地址格式无效');
 		if (index(address, ':') >= 0) continue;
 		let parts = split(address, '/'), range = cidr(address), host = ipv4(parts[0]);
 		if (length(parts) != 2 || range == null || host == null)
-			fail('UNSUPPORTED_NETWORK', 'wg 的 IPv4 地址必须包含有效前缀');
-		if (!first) first = { address, host, range };
-		push(excluded, parts[0]);
+			fail('UNSUPPORTED_NETWORK', '接口的 IPv4 地址必须包含有效前缀');
+		let octet = int(host / 16777216);
+		if (range.bits < 8 || range.bits > 30 || octet == 0 || octet == 127 || octet >= 224 || host <= range.start || host >= range.end)
+			fail('UNSUPPORTED_NETWORK', '每个接口 IPv4 须为 /8–/30 网段中的有效主机地址');
+		if (index(servers, address) < 0) push(servers, address);
+		if (index(excluded, parts[0]) < 0) push(excluded, parts[0]);
+		let subnet = ipv4_text(range.start) + '/' + range.bits;
+		if (index(subnets, subnet) < 0) {
+			if (length(pools) >= 16) fail('UNSUPPORTED_NETWORK', '一个接口最多支持 16 个 IPv4 网段');
+			push(subnets, subnet);
+			push(pools, { subnet, prefix: range.bits, first: range.start + 1, last: range.end - 1,
+				server_addresses: [] });
+			push(reserved, ipv4_text(range.start), ipv4_text(range.end));
+		}
+		let i = index(subnets, subnet);
+		if (index(pools[i].server_addresses, address) < 0) push(pools[i].server_addresses, address);
 	}
-	if (!first) {
-		if (!allow_default) fail('NO_IPV4_NETWORK', '请先在 iStoreOS 配置 wg 的 IPv4 地址和前缀');
+	if (!length(servers)) {
+		if (!allow_default) fail('NO_IPV4_NETWORK', '请先在 iStoreOS 配置所选接口的 IPv4 地址和前缀');
 		let fallback = network_profile({ addresses: ['192.168.66.1/24'] }, false);
 		fallback.available = false; fallback.source = 'default';
 		return fallback;
 	}
-	let r = first.range, octet = int(first.host / 16777216);
-	if (r.bits < 8 || r.bits > 30 || octet == 0 || octet == 127 || octet >= 224 || first.host <= r.start || first.host >= r.end)
-		fail('UNSUPPORTED_NETWORK', 'wg 主 IPv4 须为 /8–/30 网段中的有效主机地址');
-	let low = r.start + 1, high = r.end - 1;
-	while (low <= high && index(excluded, ipv4_text(low)) >= 0) low++;
-	while (high >= low && index(excluded, ipv4_text(high)) >= 0) high--;
-	if (low > high) fail('POOL_EXHAUSTED', 'wg 网段没有可分配给客户端的地址');
-	return { available: true, source: 'interface', server_address: first.address,
-		server_ip: ipv4_text(first.host), subnet: ipv4_text(r.start) + '/' + r.bits,
-		prefix: r.bits, first: low, last: high, pool_start: ipv4_text(low), pool_end: ipv4_text(high),
-		excluded_addresses: excluded,
-		hint: ipv4_text(low) + '–' + ipv4_text(high) + '；排除服务端地址 ' + join(', ', excluded) };
+	// Reserve boundaries of every configured subnet, including overlapping prefixes.
+	for (let address in excluded) if (index(reserved, address) < 0) push(reserved, address);
+	let hints = [];
+	for (let pool in pools) {
+		while (pool.first <= pool.last && index(reserved, ipv4_text(pool.first)) >= 0) pool.first++;
+		while (pool.last >= pool.first && index(reserved, ipv4_text(pool.last)) >= 0) pool.last--;
+		pool.pool_start = pool.first <= pool.last ? ipv4_text(pool.first) : null;
+		pool.pool_end = pool.first <= pool.last ? ipv4_text(pool.last) : null;
+		push(hints, pool.pool_start ? pool.pool_start + '–' + pool.pool_end : pool.subnet + '（无可分配地址）');
+	}
+	let first = pools[0];
+	return { available: true, source: 'interface', server_address: servers[0],
+		server_addresses: servers, server_ip: split(servers[0], '/')[0], subnets, pools,
+		subnet: first.subnet, prefix: first.prefix, first: first.first, last: first.last,
+		pool_start: first.pool_start, pool_end: first.pool_end, excluded_addresses: excluded,
+		reserved_addresses: reserved,
+		hint: join('；', hints) + '；排除所有网段的网络/广播地址和服务端地址 ' + join(', ', excluded) };
 }
 
 function address_in_pool(address, pool) {
 	let n = ipv4(address);
-	return n != null && pool != null && n >= pool.first && n <= pool.last && index(pool.excluded_addresses, address) < 0;
+	if (n == null || pool == null || index(pool.reserved_addresses ?? pool.excluded_addresses ?? [], address) >= 0) return false;
+	for (let part in pool.pools ?? [pool]) if (n >= part.first && n <= part.last) return true;
+	return false;
 }
 
 function netmask_prefix(mask) {
@@ -106,7 +131,7 @@ function netmask_prefix(mask) {
 }
 
 function default_routes(snapshot, pool) {
-	let routes = [pool.subnet];
+	let routes = clone(pool.subnets ?? [pool.subnet]);
 	for (let address in snapshot?.lan_addresses ?? []) {
 		if (type(address) != 'string' || index(address, ':') >= 0) continue;
 		let value = address;
@@ -118,13 +143,13 @@ function default_routes(snapshot, pool) {
 		let range = cidr(value);
 		if (!range || range.bits == 0) continue;
 		let subnet = ipv4_text(range.start) + '/' + range.bits;
-		if (index(routes, subnet) < 0 && length(routes) < 16) push(routes, subnet);
+		if (index(routes, subnet) < 0 && length(routes) < 64) push(routes, subnet);
 	}
 	return routes;
 }
 
 function network_signature(snapshot) {
-	return { addresses: clone(snapshot.addresses ?? []),
+	return { interface: snapshot.interface ?? IFACE, listen_port: snapshot.listen_port ?? PORT, addresses: clone(snapshot.addresses ?? []),
 		lan_addresses: clone(snapshot.lan_addresses ?? []), lan_netmask: snapshot.lan_netmask ?? '' };
 }
 
@@ -134,7 +159,7 @@ function validate_address(address, pool) {
 	if (n == null || n == 0 || n == 4294967295)
 		fail('INVALID_ADDRESS', '客户端 IPv4 地址无效');
 	if (pool && !address_in_pool(address, pool))
-		fail('INVALID_ADDRESS', '客户端地址须属于当前 wg 地址池：' + pool.hint);
+		fail('INVALID_ADDRESS', '客户端地址须属于所选接口地址池：' + pool.hint);
 	return address;
 }
 
@@ -152,8 +177,8 @@ function validate_settings(value) {
 		if (length(label) > 63 || (host != '' && !match(label, /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$/)))
 			fail('INVALID_ENDPOINT', '域名标签无效');
 	if (type(value.dns) != 'array' || length(value.dns) > 3 ||
-		type(value.routes) != 'array' || length(value.routes) < 1 || length(value.routes) > 16)
-		fail('INVALID_SETTINGS', 'DNS 最多 3 项，客户端路由须为 1–16 项');
+		type(value.routes) != 'array' || length(value.routes) < 1 || length(value.routes) > 64)
+		fail('INVALID_SETTINGS', 'DNS 最多 3 项，客户端路由须为 1–64 项');
 	for (let address in value.dns)
 		if (ipv4(address) == null) fail('INVALID_DNS', 'DNS 仅支持 IPv4 地址');
 	for (let route in value.routes)
@@ -240,13 +265,19 @@ function find_owned(state, public_key) {
 }
 
 function ready(snapshot, state) {
-	if (!snapshot.up || snapshot.interface != IFACE || snapshot.listen_port != PORT || !key(snapshot.public_key))
-		fail('INTERFACE_NOT_READY', '现有 wg 接口未运行或监听端口不匹配；插件不会启动或修改接口');
+	if (snapshot.selection_required) fail('SELECT_INTERFACE', '检测到多个 WireGuard 接口，请先选择管理接口');
+	if (!snapshot.up || !valid_interface(snapshot.interface) || type(snapshot.listen_port) != 'int' ||
+		snapshot.listen_port < 1 || snapshot.listen_port > 65535 || !key(snapshot.public_key))
+		fail('INTERFACE_NOT_READY', '所选 WireGuard 接口未运行或监听端口无效；插件不会启动或修改接口');
 	let pool = network_profile(snapshot);
-	if (snapshot.proto != 'wireguard' || !snapshot.route_ok)
-		fail('UNSUPPORTED_NETWORK', '当前 wg IPv4 网段缺少直连路由；插件不会修改路由或防火墙');
-	if (snapshot.runtime_addresses != null && index(snapshot.runtime_addresses, pool.server_address) < 0)
-		fail('NETWORK_NOT_APPLIED', 'wg 配置地址尚未应用到运行接口，请先在 iStoreOS 核对接口状态');
+	if (snapshot.proto != 'wireguard') fail('UNSUPPORTED_NETWORK', '所选接口没有对应的原生 UCI WireGuard 配置，不能管理');
+	if (snapshot.runtime_addresses != null) {
+		let missing = filter(pool.server_addresses, address => index(snapshot.runtime_addresses, address) < 0);
+		if (length(missing)) fail('NETWORK_NOT_APPLIED', '接口配置地址尚未应用：' + join(', ', missing) + '；请在网络页面保存并应用后重试');
+	}
+	if (!snapshot.route_ok)
+		fail('UNSUPPORTED_NETWORK', '所选接口 IPv4 网段缺少直连路由' +
+			(length(snapshot.missing_routes ?? []) ? '：' + join(', ', snapshot.missing_routes) : '') + '；插件不会修改路由或防火墙');
 	if (state.server_public_key != '' && snapshot.public_key != state.server_public_key)
 		fail('SERVER_CHANGED', '服务端公钥发生变化，管理操作已锁定');
 	let uci = configured(snapshot);
@@ -284,7 +315,7 @@ function overlaps(snapshot, state, address, except_id) {
 
 function allocate(snapshot, state) {
 	let pool = network_profile(snapshot), ranges = [];
-	for (let address in pool.excluded_addresses) { let n = ipv4(address); push(ranges, { start: n, end: n }); }
+	for (let address in pool.reserved_addresses) { let n = ipv4(address); push(ranges, { start: n, end: n }); }
 	for (let id, peer in state.peers) { let n = ipv4(peer.address); push(ranges, { start: n, end: n }); }
 	for (let source in snapshot.uci_peers ?? []) for (let value in source.allowed_ips ?? []) {
 		if (index(value, ':') >= 0) continue;
@@ -298,16 +329,19 @@ function allocate(snapshot, state) {
 		if (!range) fail('UNKNOWN_ALLOWED_IPS', '运行中的客户端含无法识别的 AllowedIPs');
 		push(ranges, range);
 	}
-	let candidate = pool.first;
-	// Jump over occupied ranges, including broad AllowedIPs, rather than scanning a /8.
-	for (let range in sort(ranges, (a, b) => a.start - b.start)) {
-		if (range.end < candidate) continue;
-		if (range.start > candidate) return ipv4_text(candidate);
-		candidate = max(candidate, range.end + 1);
-		if (candidate > pool.last) break;
+	ranges = sort(ranges, (a, b) => a.start - b.start);
+	// Walk configured pools in order; jump occupied ranges without scanning every host.
+	for (let part in pool.pools) {
+		let candidate = part.first;
+		for (let range in ranges) {
+			if (candidate > part.last) break;
+			if (range.end < candidate) continue;
+			if (range.start > candidate) return ipv4_text(candidate);
+			candidate = max(candidate, range.end + 1);
+		}
+		if (candidate <= part.last) return ipv4_text(candidate);
 	}
-	if (candidate <= pool.last) return ipv4_text(candidate);
-	fail('POOL_EXHAUSTED', '当前 wg 网段没有可用客户端地址，禁用客户端地址也会保留');
+	fail('POOL_EXHAUSTED', '所选接口网段没有可用客户端地址，禁用客户端地址也会保留');
 }
 
 function target_matches(actual, peer) {
@@ -346,7 +380,7 @@ function fingerprint(snapshot, except_key) {
 	}
 	return { public_key: snapshot.public_key, listen_port: snapshot.listen_port, fwmark: snapshot.fwmark,
 		network: network_signature(snapshot), runtime_addresses: clone(snapshot.runtime_addresses ?? snapshot.addresses ?? []),
-		route_ok: snapshot.route_ok, peers };
+		route_ok: snapshot.route_ok, missing_routes: clone(snapshot.missing_routes ?? []), peers };
 }
 
 function accumulate(ledger, snapshot, clock) {
@@ -379,7 +413,13 @@ function manager(io) {
 		ready(snap, state);
 	}
 	function status() {
-		let snap = io.snapshot(), state = load(snap);
+		let snap = io.snapshot();
+		if (snap.selection_required) return { version: VERSION, interface: '', interfaces: snap.interfaces,
+			selection_required: true, up: false, listen_port: null, mode: 'monitor', health: 'blocked',
+			message: '检测到多个 WireGuard 接口，请先选择管理接口；切换只改变本页管理目标',
+			peers: [], network: null, default_routes: [], settings: { endpoint: '', dns: [], routes: [], routes_mode: 'auto', keepalive: 25 },
+			stats: { collector: false }, timestamp: io.clock().wall };
+		let state = load(snap);
 		let ledger = io.sample(snap, false), rows = [], added = {}, pool = null;
 		try { pool = network_profile(snap, true); } catch (e) {}
 		function add(pub, own, source) {
@@ -408,7 +448,8 @@ function manager(io) {
 		catch (e) { health = 'blocked'; message = split(e.message, '|')[1] ?? '接口检查未通过'; }
 		if (io.load_journal()) { health = 'recovery'; message = '存在未完成事务，管理已锁定；运行 wgmanager doctor'; }
 		return { version: VERSION, mode: state.mode, existing_management: state.existing_management === true, revision: state.revision, health, message,
-			interface: IFACE, up: snap.up, listen_port: snap.listen_port ?? PORT,
+			interface: snap.interface, interfaces: snap.interfaces ?? [{ name: snap.interface, configured: true, up: snap.up }],
+			selection_required: false, up: snap.up, listen_port: snap.listen_port ?? null,
 			public_key: snap.public_key ?? '', network: pool, default_routes: pool ? default_routes(snap, pool) : [],
 			settings: effective_settings(state, snap, pool), peers: rows,
 			stats: { started: ledger.started, last_checkpoint: ledger.last_checkpoint,
@@ -434,7 +475,7 @@ function manager(io) {
 			if (overlaps(snap, state, payload.address, null)) fail('IP_CONFLICT', '此地址已被配置或运行中的客户端占用');
 			id = 'p' + io.random_hex(12);
 			if (state.peers[id]) fail('ID_COLLISION', '随机标识冲突，请重试');
-			summary = { title: '新增客户端', name: payload.name, address: payload.address, detail: '仅向现有 wg 添加一个 Peer' };
+			summary = { title: '新增客户端', name: payload.name, address: payload.address, detail: '仅向所选接口 ' + snap.interface + ' 添加一个 Peer' };
 		}
 		else {
 			validate_id(id);
@@ -460,6 +501,7 @@ function manager(io) {
 				detail: (action == 'disable' || action == 'delete') ? '所选客户端将断开；其他客户端保持原状' :
 					(action == 'edit' && payload.address != peer.address) ? '修改地址后须重新下载并导入此客户端配置' : '仅更新所选客户端' };
 		}
+		summary.interface = snap.interface;
 		let clock = io.clock(), token = io.random_hex(24);
 		io.save_plan(token, { schema: 1, owner, token, action, peer_id: id, payload,
 			revision: state.revision, server_public_key: snap.public_key, network: network_signature(snap), boot: clock.boot,
@@ -473,7 +515,7 @@ function manager(io) {
 		for (let source in snap.uci_peers ?? []) {
 			if (!key(source.public_key) || find_owned(after, source.public_key)) continue;
 			if (!valid_section(source.section) || type(source.options) != 'object' || length(source.allowed_ips) != 1 || !match(source.allowed_ips[0], /^[0-9.]+\/32$/))
-				fail('UNSUPPORTED_LEGACY', '既有客户端须为当前 wg 地址池内的单一 IPv4 /32 地址，未接管任何客户端');
+				fail('UNSUPPORTED_LEGACY', '既有客户端须为所选接口地址池内的单一 IPv4 /32 地址，未接管任何客户端');
 			let address = validate_address(split(source.allowed_ips[0], '/')[0], network_profile(snap));
 			let keepalive = source.options.persistent_keepalive || '0';
 			if (keepalive == 'off') keepalive = '0';
@@ -646,16 +688,16 @@ function manager(io) {
 		if (!peer || legacy(peer)) fail('NO_PRIVATE_KEY', '旧客户端私钥不在插件中，无法恢复或重新生成配置');
 		ready(snap, state);
 		let pool = network_profile(snap);
-		if (!address_in_pool(peer.address, pool)) fail('ADDRESS_OUTSIDE_POOL', '客户端仍在旧网段，请先编辑为当前 wg 地址池中的地址并同步客户端');
+		if (!address_in_pool(peer.address, pool)) fail('ADDRESS_OUTSIDE_POOL', '客户端仍在旧网段，请先编辑为所选接口地址池中的地址并同步客户端');
 		let settings = effective_settings(state, snap, pool);
 		if (!settings.endpoint) fail('NO_ENDPOINT', '请先填写公网域名或 IPv4 地址');
 		if (!key(state.server_public_key)) fail('NO_SERVER_KEY', '尚未初始化服务端公钥');
 		let c = `[Interface]\nPrivateKey = ${peer.private_key}\nAddress = ${peer.address}/32\n`;
 		if (length(settings.dns)) c += `DNS = ${join(', ', settings.dns)}\n`;
 		c += `\n[Peer]\nPublicKey = ${state.server_public_key}\nPresharedKey = ${peer.preshared_key}\n`;
-		c += `AllowedIPs = ${join(', ', settings.routes)}\nEndpoint = ${settings.endpoint}:${PORT}\n`;
+		c += `AllowedIPs = ${join(', ', settings.routes)}\nEndpoint = ${settings.endpoint}:${snap.listen_port}\n`;
 		c += `PersistentKeepalive = ${settings.keepalive}\n`;
-		let result = { filename: `${IFACE}-${args.peer_id}.conf`, config: c, disabled: !peer.enabled };
+		let result = { filename: `${snap.interface}-${args.peer_id}.conf`, config: c, disabled: !peer.enabled };
 		if (args.qr === true) result.qr_svg = io.qr(c);
 		return result;
 	}
@@ -740,4 +782,4 @@ function manager(io) {
 	return { status, prepare, apply, export_peer, enable, manage_existing, restore, recover };
 }
 
-export { network_profile, address_in_pool, ipv4_text, default_routes, legacy, options_equal, valid_section, VERSION, IFACE, PORT, SUBNET, fail, clone, equal, key, ipv4, cidr, empty_state, validate_state, accumulate, manager };
+export { valid_interface, network_profile, address_in_pool, ipv4_text, default_routes, legacy, options_equal, valid_section, VERSION, IFACE, PORT, SUBNET, fail, clone, equal, key, ipv4, cidr, empty_state, validate_state, accumulate, manager };

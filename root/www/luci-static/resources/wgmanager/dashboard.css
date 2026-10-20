@@ -179,3 +179,8 @@
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* The picker is scoped to this browser tab; dialogs retain their original target. */
+.wgm-interface-picker { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--wgm-muted); font-size: 12px; max-width: 100%; }
+.wgm-root .wgm-interface-select { min-height: 34px; height: auto; max-width: 210px; margin: 0; padding: 6px 10px; border: 1px solid var(--wgm-border); border-radius: 7px; color: var(--wgm-text); background: var(--wgm-surface); font-size: 12px; box-shadow: none; }
+.wgm-metric-note { overflow-wrap: anywhere; }

@@ -162,11 +162,11 @@ test('IP claimed between preview and apply is rejected', () => {
 	push(f.snap.uci_peers, { public_key: pk(99), allowed_ips: ['192.168.66.5/32'], disabled: '1' });
 	rejects('IP_CONFLICT', () => f.api.apply({ token: a.token }, 'owner')); assert(length(f.changes) == 0, 'zero commands');
 });
-test('server identity, port, route and protected-set changes freeze mutations', () => {
+test('server identity, invalid port, route and protected-set changes freeze mutations', () => {
 	for (let kind in ['public_key', 'listen_port', 'route_ok', 'protected']) {
 		let f = fixture(); f.api.enable(true);
 		if (kind == 'protected') { f.snap.uci_peers = []; f.snap.peers = {}; }
-		else f.snap[kind] = kind == 'public_key' ? pk(9999) : kind == 'listen_port' ? 51821 : false;
+		else f.snap[kind] = kind == 'public_key' ? pk(9999) : kind == 'listen_port' ? 0 : false;
 		rejects(kind == 'public_key' ? 'SERVER_CHANGED' : kind == 'protected' ? 'PROTECTED_CHANGED' : kind == 'route_ok' ? 'UNSUPPORTED_NETWORK' : 'INTERFACE_NOT_READY', () => f.create());
 		assert(length(f.changes) == 0, 'zero changes on incompatible interface');
 	}

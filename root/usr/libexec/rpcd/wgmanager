@@ -6,10 +6,10 @@ import { manager, fail } from '/usr/share/wgmanager/core.uc';
 import { platform } from '/usr/share/wgmanager/platform.uc';
 
 const methods = {
-	status: { ubus_rpc_session: '' },
-	prepare: { action: '', peer_id: '', payload: '', ubus_rpc_session: '' },
-	apply: { token: '', ubus_rpc_session: '' },
-	export: { peer_id: '', qr: true, ubus_rpc_session: '' }
+	status: { interface: '', ubus_rpc_session: '' },
+	prepare: { interface: '', action: '', peer_id: '', payload: '', ubus_rpc_session: '' },
+	apply: { interface: '', token: '', ubus_rpc_session: '' },
+	export: { interface: '', peer_id: '', qr: true, ubus_rpc_session: '' }
 };
 
 if (ARGV[0] == 'list') { printf('%J\n', methods); exit(0); }
@@ -24,7 +24,9 @@ try {
 	// without a session are trusted root IPC, and share the local owner label.
 	let owner = args.ubus_rpc_session ?? 'local-root';
 	if (type(owner) != 'string' || length(owner) > 64) fail('INVALID_SESSION', '会话标识无效');
-	io = platform(); io.lock();
+	io = platform({ interface: args.interface ?? '' });
+	if (ARGV[1] != 'status' && io.interface == '') fail('SELECT_INTERFACE', '检测到多个接口，请先选择管理接口');
+	io.lock();
 	let api = manager(io), result;
 	if (ARGV[1] == 'status') result = api.status();
 	else if (ARGV[1] == 'prepare') result = api.prepare(args, owner);
