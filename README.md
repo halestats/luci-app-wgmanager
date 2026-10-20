@@ -2,7 +2,7 @@
 
 原生 LuCI + ucode WireGuard 客户端管理插件，面向 iStoreOS / OpenWrt 24.10 已有的 WireGuard 接口。支持中文界面、深浅主题、手机布局、客户端管理及配置/二维码导出。
 
-**当前开发版本：0.5.0-1（预发布，待功能及设备验收） · Apache-2.0**
+**当前正式版本：0.5.0-1（2026-10-21） · Apache-2.0**
 
 [下载安装包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.5.0/luci-app-wgmanager_0.5.0-1_all.ipk) · [源码分享包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.5.0/luci-app-wgmanager-GitHub-0.5.0.zip) · [版本说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/RELEASE-0.5.0.md) · [常见问题](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [0.3.1 发布基线](https://github.com/halestats/luci-app-wgmanager/releases/tag/v0.3.1)
 
@@ -114,15 +114,17 @@ IPK 为 `all`，表示插件没有架构专用二进制，不代表所有固件�
 
 [历史桌面布局截图](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/images/dashboard-desktop.png) 属于 0.3.0；最新字段以本版安装界面和预览为准。
 
-## 构建与检查范围
+## 正式发布与检查记录
 
 ```sh
 WGM_DIST="$PWD/dist" python3 scripts/build_ipk.py
 ```
 
+本次将实测的 0.5.0 从预发布转为正式版，安装包、标签及原附件保持一致；已安装 0.5.0 无需重新安装。源码 ZIP 为原始构建快照，其中预发布阶段文档保留；最新说明以本页和正式发布说明为准。
+
 IPK SHA-256：`629b2d02dd988deb2afc608804d17791069b56a749929a88fcac0ec9610c4fb8`。
 
-本次执行静态语法/编译和文件核对，**没有新增或运行功能测试，也没有连接用户路由器验证 0.5.0**。不将旧版通过记录计入本版。以预发布提供，详见 [按版本检查记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)。
+2026-10-21，使用者在现有设备运行后反馈“实测没问题”，并确认正式发布。开发侧此前完成静态语法/编译和文件核对；本次未新增自动化测试或由开发侧连接路由器验证。用户反馈与历史检查分别记录，详见 [按版本检查记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)。
 
 [地址与接口说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/ADDRESS-CONFIGURATION.md) · [FAQ](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [更新记录](https://github.com/halestats/luci-app-wgmanager/blob/main/CHANGELOG.md)
 
