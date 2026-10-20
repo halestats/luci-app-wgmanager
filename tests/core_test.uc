@@ -85,9 +85,11 @@ test('enable captures baseline without changing any peer', () => {
 	let f = fixture(), result = f.api.enable(true);
 	assert(result.protected_count == 3 && length(f.changes) == 0, 'baseline only'); f.unchanged();
 });
-test('missing expected legacy clients blocks first enable', () => {
+test('first enable accepts a fresh server with no existing clients', () => {
 	let f = fixture(); f.snap.uci_peers = []; f.snap.peers = {};
-	rejects('BASELINE_INCOMPLETE', () => f.api.enable(true)); assert(f.state() == null, 'no state saved');
+	let result = f.api.enable(true);
+	assert(result.mode == 'manage' && result.protected_count == 0 && length(f.changes) == 0, 'empty baseline captures server identity only');
+	assert(f.api.status().mode == 'manage' && length(f.api.status().peers) == 0, 'empty managed state remains readable');
 });
 test('create allocates .5 and targets only new peer', () => {
 	let f = fixture(); f.api.enable(true); let id = f.create();

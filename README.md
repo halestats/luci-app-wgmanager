@@ -2,15 +2,15 @@
 
 为已有 WireGuard 接口提供中文客户端管理页面。原生 LuCI + ucode 实现，界面布局参考 wg-easy，支持深浅主题与手机布局。
 
-**当前版本：0.3.0-1 · Apache-2.0**
+**当前版本：0.3.1-1 · Apache-2.0**
 
-[下载安装包](downloads/v0.3.0/luci-app-wgmanager_0.3.0-1_all.ipk?raw=true) · [源码分享包](downloads/v0.3.0/luci-app-wgmanager-GitHub-0.3.0.zip?raw=true) · [版本说明](docs/RELEASE-0.3.0.md) · [常见问题](docs/FAQ.md) · [检查记录](docs/TEST-RESULTS.md)
+[下载安装包](downloads/v0.3.1/luci-app-wgmanager_0.3.1-1_all.ipk?raw=true) · [源码分享包](downloads/v0.3.1/luci-app-wgmanager-GitHub-0.3.1.zip?raw=true) · [版本说明](docs/RELEASE-0.3.1.md) · [常见问题](docs/FAQ.md) · [检查记录](docs/TEST-RESULTS.md)
 
 > **请先核对适用条件。** 当前是针对既有 iStoreOS 部署开发的版本，接口、端口、地址池仍固定在代码中；不是自动搭建 WireGuard 的通用安装器。安装不会创建接口、开放防火墙或配置 NAT。
 
 ![桌面界面演示](docs/images/dashboard-desktop.png)
 
-*截图来自离线演示，所有数据均为测试数据，不代表真实设备或客户端在线情况。[手机布局](docs/images/dashboard-mobile.png) · 下载 [离线交互预览](docs/preview.html?raw=true) 后用浏览器打开。*
+*截图为 0.3.0 离线演示（0.3.1 布局相同），所有数据均为测试数据，不代表真实设备或客户端在线情况。[手机布局](docs/images/dashboard-mobile.png) · 下载 [离线交互预览](docs/preview.html?raw=true) 后用浏览器打开。*
 
 ## 功能
 
@@ -23,14 +23,14 @@
 
 ## 适用环境与当前限制
 
-| 项目 | 0.3.0 的要求或范围 |
+| 项目 | 0.3.1 的要求或范围 |
 | --- | --- |
 | 目标固件 | iStoreOS / OpenWrt 24.10 系列，需有 opkg、LuCI、rpcd、ucode |
 | 运行接口 | 已配置并运行的 `wg`，UCI 协议为 `wireguard` |
 | 服务端地址 | `192.168.66.1/24`，存在 `192.168.66.0/24` 直连路由 |
 | 监听端口 | UDP `51820` |
 | 客户端地址池 | `192.168.66.2`–`192.168.66.254`，每个客户端单一 `/32` |
-| 初次启用管理 | 至少识别到 **3 个既有客户端**，这是当前保留的保护基线 |
+| 初次启用管理 | 无客户端数量门槛，支持从 **0 个客户端**开始 |
 | IPv6 | 当前地址分配、DNS 和导出路由只支持 IPv4，不能填写 `::/0` |
 | 导出默认路由 | `192.168.66.0/24, 192.168.95.0/24`；后者是原目标环境 LAN，须在导出设置中按实际情况修改 |
 | 依赖 | luci-base、rpcd、ucode、ucode-mod-fs、ucode-mod-uci、wireguard-tools、qrencode |
@@ -43,7 +43,7 @@ IPK 的 `all` 表示插件无架构专用二进制；依赖必须由固件对应
 2. 确认软件源与当前固件匹配，依赖缺失时按需执行 `opkg update`，然后：
 
 ```sh
-opkg install /tmp/luci-app-wgmanager_0.3.0-1_all.ipk
+opkg install /tmp/luci-app-wgmanager_0.3.1-1_all.ipk
 wgmanager doctor
 ```
 
@@ -74,7 +74,9 @@ wgmanager enable-management
 wgmanager doctor
 ```
 
-开启后可以管理插件新建的客户端，原有客户端仍受保护。若返回 `BASELINE_INCOMPLETE`，说明未识别到至少 3 个既有客户端，保持只读并先核对环境。
+开启后可以从第一个客户端开始新增；已有 1 个、2 个或更多客户端也不受数量限制。启用时记录服务端身份，并保护实际发现的既有客户端；需要修改这些客户端时再显式接管。
+
+**新系统仍须先配置并启用符合上述条件的 WireGuard 接口。** 取消客户端数量门槛不代表插件会自动创建服务端、配置防火墙或 NAT。没有旧客户端时，无需执行 `manage-existing`。
 
 首次创建新客户端前，在“导出设置”填写实际公网域名或 IPv4（不带协议、路径和端口），配置 DNS 与客户端 AllowedIPs。页面操作先预览，确认后生效，最后扫码或下载配置到对应客户端。
 
@@ -128,19 +130,19 @@ wgmanager read-only
 WGM_DIST="$PWD/dist" python3 scripts/build_ipk.py
 ```
 
-会输出 `dist/luci-app-wgmanager_0.3.0-1_all.ipk`。当前仓库的 Makefile 是本项目构建入口，不是可直接放入 OpenWrt SDK 的 package 配方。
+会输出 `dist/luci-app-wgmanager_0.3.1-1_all.ipk`。当前仓库的 Makefile 是本项目构建入口，不是可直接放入 OpenWrt SDK 的 package 配方。
 
 发布 IPK 的 SHA-256：
 
 ```text
-15e719b46a4d77718c0832baffe60ff4414ebf0581f2d4990a02c5e12b77b8a9
+e24736c38474c450182fac4ecb47325b7ab40d6b557e27db6b3efe991d807eb3
 ```
 
 [目录说明与发布清单](docs/GITHUB-PUBLISH.md) · [测试方法](docs/TESTING.md) · [更新记录](CHANGELOG.md) · [安全设计与历史审查](docs/SECURITY-REVIEW.md)
 
 ## 验证范围
 
-0.2.6 的新增客户端管理已获目标 iStoreOS 用户反馈正常。0.3.0 的原有客户端接管新增功能有 135 项本地检查记录，包含 28 项隔离环境的实际 WireGuard 内核检查；未将其描述为所有固件或所有硬件的验证结果。尚未收到目标设备针对 0.3.0 接管功能的独立验收日志。详见 [当前结果](docs/TEST-RESULTS.md)。
+0.3.1 本次移除数量门槛并同步状态校验，未运行功能测试或设备验收。保留的 135 项检查记录属于 0.3.0，不能作为 0.3.1 已通过的结果。0.2.6 新客户端管理曾获目标 iStoreOS 用户正常使用反馈。详见 [按版本记录](docs/TEST-RESULTS.md)。
 
 ## 反馈与贡献
 

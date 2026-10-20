@@ -2,7 +2,7 @@
 // Pure policy/transaction code. The platform adapter owns all side effects.
 'use strict';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const IFACE = 'wg';
 const PORT = 51820;
 const SUBNET = '192.168.66.0/24';
@@ -105,9 +105,8 @@ function validate_state(state) {
 		(state.server_public_key != '' && !key(state.server_public_key)))
 		fail('INVALID_STATE', '管理数据损坏，已停止写入；请保留文件并检查');
 	validate_settings(state.settings);
-	if ((state.mode == 'manage' || length(keys(state.peers)) > 0) &&
-		(!key(state.server_public_key) || (state.existing_management !== true && length(state.protected_keys) < 3)))
-		fail('INVALID_STATE', '管理数据缺少服务端身份或受保护客户端基线');
+	if ((state.mode == 'manage' || length(keys(state.peers)) > 0) && !key(state.server_public_key))
+		fail('INVALID_STATE', '管理数据缺少服务端身份');
 	let seen = {}, addresses = {};
 	for (let pub in state.protected_keys) {
 		if (!key(pub) || seen[pub]) fail('INVALID_STATE', '受保护公钥列表无效');
@@ -530,7 +529,7 @@ function manager(io) {
 			for (let pub in keys(configured(snap))) if (!find_owned(state, pub)) protect[pub] = true;
 			for (let pub in keys(snap.peers)) if (!find_owned(state, pub)) protect[pub] = true;
 			state.protected_keys = sort(keys(protect));
-			if (state.existing_management !== true && length(state.protected_keys) < 3) fail('BASELINE_INCOMPLETE', '当前未识别到预期的至少 3 个既有客户端，保持只读');
+			// Protect the existing peers actually found; a fresh server may have none.
 			state.server_public_key = snap.public_key;
 		}
 		state.mode = value ? 'manage' : 'monitor';

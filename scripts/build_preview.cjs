@@ -6,8 +6,8 @@ fs.mkdirSync(out,{recursive:true});
 let {harness}=require(root+'/tests/ui_test.cjs');
 const css=fs.readFileSync(root+'/root/www/luci-static/resources/wgmanager/dashboard.css','utf8');
 harness=harness.replace("resource:()=>'/style.css'",'resource:()=>'+JSON.stringify('data:text/css;charset=utf-8,'+encodeURIComponent(css)+'#'));
-harness=harness.replace('<title>WireGuard Manager test harness</title>', '<title>WireGuard Manager 0.3.0 · 离线布局预览</title>');
-harness=harness.replace('<main id="app">','<p style="max-width:1160px;margin:0 auto 16px;color:#64748b;font-size:12px">0.3.0 布局预览 · 所有数据均为演示，按钮仅操作本页模拟数据，不连接路由器。</p><main id="app">');
+harness=harness.replace('<title>WireGuard Manager test harness</title>', '<title>WireGuard Manager 0.3.1 · 离线布局预览</title>');
+harness=harness.replace('<main id="app">','<p style="max-width:1160px;margin:0 auto 16px;color:#64748b;font-size:12px">0.3.1 布局预览 · 所有数据均为演示，按钮仅操作本页模拟数据，不连接路由器。</p><main id="app">');
 harness=harness.replace('background:#2466dc!important;color:white!important;border-color:#2466dc!important','background:#147d66;color:white;border-color:#147d66');
 harness=harness.replace("mode:'monitor'", "mode:'manage'");
 harness=harness.replace('const rpc={declare:', `
@@ -22,6 +22,6 @@ function animate(){sample++;mock.peers.forEach((p,i)=>{if(i>1)return;let down=Ma
 app.last=Object.fromEntries(mock.peers.map(p=>[p.public_key,{rx:p.transfer_rx,tx:p.transfer_tx,time:performance.now()-2000}]));
 for(let i=0;i<24;i++){mock.peers.forEach((p,j)=>{app.history[p.public_key]=(app.history[p.public_key]||[]).concat([{down:j<2?(1+Math.sin(i/3+j))*500000:0,up:j<2?(1+Math.cos(i/4+j))*90000:0}]);});}
 animate();setInterval(animate,2000);`);
-const target=path.join(out, 'WireGuard-Manager-0.3.0-preview.html');
+const target=path.join(out, 'WireGuard-Manager-0.3.1-preview.html');
 fs.writeFileSync(target,harness);
 console.log(target);

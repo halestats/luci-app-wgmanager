@@ -89,7 +89,7 @@ return view.extend({
 			E('option', { value: 'recent' }, ['按最近握手排序']), E('option', { value: 'download' }, ['按下载速度排序'])
 		]);
 		this.root = E('div', { 'class': 'wgm-root' }, [
-			E('link', { rel: 'stylesheet', href: L.resource('wgmanager/dashboard.css') + '?v=' + encodeURIComponent(data.version || '0.3.0') }),
+			E('link', { rel: 'stylesheet', href: L.resource('wgmanager/dashboard.css') + '?v=' + encodeURIComponent(data.version || '0.3.1') }),
 			E('div', { 'class': 'wgm-head' }, [
 				E('div', { 'class': 'wgm-brand' }, [E('div', { 'class': 'wgm-logo', 'aria-hidden': 'true' }, ['WG']),
 					E('div', {}, [E('div', { 'class': 'wgm-eyebrow' }, ['NETWORK / VPN']),
