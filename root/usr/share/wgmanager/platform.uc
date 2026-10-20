@@ -2,7 +2,7 @@
 'use strict';
 import * as fs from 'fs';
 import { cursor } from 'uci';
-import { fail, key, ipv4, accumulate, options_equal, valid_section, IFACE, PORT } from './core.uc';
+import { fail, key, ipv4, accumulate, options_equal, valid_section, network_profile, IFACE, PORT } from './core.uc';
 
 function shellquote(value) { return "'" + replace('' + value, "'", "'\\''") + "'"; }
 
@@ -174,7 +174,7 @@ function platform(options) {
 	}
 
 	function snapshot() {
-		let result = { interface: IFACE, up: false, proto: '', addresses: [], uci_peers: [], peers: {}, route_ok: false };
+		let result = { interface: IFACE, up: false, proto: '', addresses: [], runtime_addresses: [], lan_addresses: [], lan_netmask: '', uci_peers: [], peers: {}, route_ok: false };
 		// A separate savedir prevents applying unrelated LuCI/CLI staged changes.
 		secure_dir(run);
 		let savedir = private_dir(run + '/uci-');
@@ -184,6 +184,8 @@ function platform(options) {
 			if (!ctx.load('network')) fail('UCI_READ_FAILED', '无法解析现有网络配置');
 			result.proto = ctx.get('network', IFACE, 'proto') ?? '';
 			result.addresses = list_value(ctx.get('network', IFACE, 'addresses'));
+			result.lan_addresses = list_value(ctx.get('network', 'lan', 'ipaddr'));
+			result.lan_netmask = ctx.get('network', 'lan', 'netmask') ?? '';
 			ctx.foreach('network', 'wireguard_' + IFACE, (p) => {
 				push(result.uci_peers, { section: p['.name'], options: section_options(p), public_key: p.public_key ?? '', name: p.description ?? '',
 					allowed_ips: list_value(p.allowed_ips), disabled: p.disabled ?? '0' });
@@ -213,8 +215,17 @@ function platform(options) {
 				transfer_rx: int(row[5]), transfer_tx: int(row[6]), persistent_keepalive: keepalive
 			};
 		}
-		let route = capture([ip, '-4', 'route', 'show', 'dev', IFACE], null, 16384);
-		result.route_ok = match(route, /(^|\n)192\.168\.66\.0\/24(\s|$)/) != null;
+		let addresses = capture([ip, '-4', 'address', 'show', 'dev', IFACE], null, 16384);
+		for (let line in split(addresses, '\n')) {
+			let found = match(line, /^[ \t]*inet ([0-9.]+\/[0-9]+)/);
+			if (found) push(result.runtime_addresses, found[1]);
+		}
+		let route = capture([ip, '-4', 'route', 'show', 'dev', IFACE], null, 16384), pool = null;
+		try { pool = network_profile(result); } catch (e) {}
+		if (pool) for (let line in split(route, '\n')) {
+			let fields = split(trim(line), /[[:space:]]+/);
+			if (fields[0] == pool.subnet) result.route_ok = true;
+		}
 		return result;
 	}
 
@@ -227,7 +238,7 @@ function platform(options) {
 			capture(argv, null, 8192);
 			return;
 		}
-		if ((next.preshared_key != '' && !key(next.preshared_key)) || ipv4(next.address) == null || !match(next.address, /^192\.168\.66\./))
+		if ((next.preshared_key != '' && !key(next.preshared_key)) || ipv4(next.address) == null || ipv4(next.address) == 0 || ipv4(next.address) == 4294967295)
 			fail('INVALID_PEER', '目标客户端数据无效');
 		if (purpose == 'apply' && old?.enabled) {
 			// An address edit never rewrites the PSK or resets other peer fields.

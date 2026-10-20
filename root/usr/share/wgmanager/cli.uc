@@ -13,7 +13,8 @@ try {
 	if (command == 'doctor') {
 		let status = api.status();
 		result = { version: VERSION, mode: status.mode, health: status.health, message: status.message,
-			interface: status.interface, up: status.up, listen_port: status.listen_port,
+			interface: status.interface, up: status.up, listen_port: status.listen_port, network: status.network,
+			out_of_pool_count: length(filter(status.peers, p => p.out_of_pool)),
 			client_count: length(status.peers), protected_count: length(filter(status.peers, p => p.protected)),
 			managed_count: length(filter(status.peers, p => p.managed)),
 			legacy_count: length(filter(status.peers, p => p.legacy)),

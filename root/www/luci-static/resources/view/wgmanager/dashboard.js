@@ -33,6 +33,7 @@ function ageText(age) {
 	return Math.floor(age / 86400) + ' 天前';
 }
 function peerStatus(p, now) {
+	if (p.out_of_pool) return { cls: 'idle', text: '地址需调整', age: '—' };
 	if (!p.enabled) return { cls: 'offline', text: '已禁用', age: '—' };
 	if (!p.present || p.drift) return { cls: 'idle', text: p.drift ? '状态待检查' : '未在接口中', age: '—' };
 	var t = number(p.latest_handshake), age = now - t;
@@ -89,7 +90,7 @@ return view.extend({
 			E('option', { value: 'recent' }, ['按最近握手排序']), E('option', { value: 'download' }, ['按下载速度排序'])
 		]);
 		this.root = E('div', { 'class': 'wgm-root' }, [
-			E('link', { rel: 'stylesheet', href: L.resource('wgmanager/dashboard.css') + '?v=' + encodeURIComponent(data.version || '0.3.1') }),
+			E('link', { rel: 'stylesheet', href: L.resource('wgmanager/dashboard.css') + '?v=' + encodeURIComponent(data.version || '0.4.0') }),
 			E('div', { 'class': 'wgm-head' }, [
 				E('div', { 'class': 'wgm-brand' }, [E('div', { 'class': 'wgm-logo', 'aria-hidden': 'true' }, ['WG']),
 					E('div', {}, [E('div', { 'class': 'wgm-eyebrow' }, ['NETWORK / VPN']),
@@ -126,6 +127,8 @@ return view.extend({
 	reload: function() { return statusRPC().then(unwrap).then(L.bind(this.refresh, this)); },
 	refresh: function(data) {
 		this.data = data;
+		if (this.addressNote && this.addressNote.isConnected) dom.content(this.addressNote, [(data.network ? data.network.hint : '请先配置 wg 的 IPv4 地址') + '；自动分配会避开原有和禁用客户端']);
+		if (this.routeModeField && this.routeModeField.isConnected && this.routeModeField.value === 'auto') this.autoRoutesField.value = (data.default_routes || []).join(', ');
 		dom.content(this.versionBadge, [data.version ? 'v' + data.version : '版本未知']);
 		this.live.className = 'wgm-live';
 		dom.content(this.live, [E('span', { 'class': 'wgm-dot' }), '每 2 秒更新']);
@@ -153,11 +156,13 @@ return view.extend({
 		var mode = data.mode === 'manage' ? '管理阶段' : '只读阶段';
 		var banner = mode + ' · ' + (data.existing_management ? '已开放原有客户端管理，操作会同步保存对应配置。' : protectedCount + ' 个既有客户端受保护。');
 		if (data.mode !== 'manage') banner += ' 在 SSH 执行 wgmanager enable-management 后，可新增并管理插件客户端。';
+		var outside = this.peers.filter(function(p) { return p.out_of_pool; }).length;
+		if (outside) banner += ' ' + outside + ' 个客户端仍在旧网段，请编辑地址并同步客户端配置。';
 		if (data.message) banner += ' ' + data.message;
-		this.banner.className = 'wgm-banner' + (data.health !== 'ok' ? ' wgm-warning' : '');
+		this.banner.className = 'wgm-banner' + (data.health !== 'ok' || outside ? ' wgm-warning' : '');
 		dom.content(this.banner, [banner]);
 		dom.content(this.clientCount, [String(this.peers.length)]);
-		dom.content(this.summary, [this.metric('WIREGUARD 接口', data.up ? 'wg · 运行中' : 'wg · 未运行', 'UDP ' + data.listen_port),
+		dom.content(this.summary, [this.metric('WIREGUARD 接口', data.up ? 'wg · 运行中' : 'wg · 未运行', (data.network && data.network.server_address ? data.network.server_address + (data.network.available ? '' : '（默认，未配置）') + ' · ' : '') + 'UDP ' + data.listen_port),
 			this.metric('客户端', this.peers.length + ' 台', active + ' 台近期握手'),
 			this.metric('采样累计下载', bytes(tx), '路由器 → 客户端'), this.metric('采样累计上传', bytes(rx), '客户端 → 路由器')]);
 		this.newButton.disabled = !this.canManage(); this.settingsButton.disabled = !this.canManage();
@@ -215,6 +220,7 @@ return view.extend({
 	},
 	details: function(p) {
 		ui.showModal('客户端详情', [E('p', {}, ['名称：' + p.name]), E('p', {}, ['地址：' + p.ip]),
+			p.out_of_pool ? E('p', { 'class': 'wgm-error' }, ['地址不属于当前 wg 网段；编辑后同步客户端设备地址或重新导入配置。']) : '',
 			E('p', {}, ['公钥：', E('code', { 'class': 'wgm-break' }, [p.public_key])]), E('p', {}, ['端点：' + (p.endpoint || '尚无')]),
 			E('p', {}, ['握手：' + p.status.age]),
 			E('p', {}, ['本次接口流量：↓ ' + bytes(p.transfer_tx) + ' / ↑ ' + bytes(p.transfer_rx)]), E('p', {}, [p.protected ?
@@ -225,8 +231,11 @@ return view.extend({
 		if (!this.canManage()) return;
 		var name = input(p ? p.name : '', '例如：iPhone'), address = input(p ? p.allowed_ips[0].split('/')[0] : '', '留空自动分配');
 		name.maxLength = 96;
+		var addressField = field('客户端 IPv4 地址', address, (this.data.network ? this.data.network.hint : '请先配置并启用 wg 的 IPv4 地址') + '；自动分配会避开原有和禁用客户端');
+		this.addressNote = addressField.querySelector('small');
 		ui.showModal(p ? '编辑客户端' : '新增客户端', [field('名称', name),
-			field('客户端 IPv4 地址', address, '192.168.66.2–254；自动分配会避开原有和禁用客户端'),
+			addressField,
+			p && p.out_of_pool ? E('p', { 'class': 'wgm-error' }, ['此客户端仍在旧网段，请填写上方当前范围内的新地址；保存后同步客户端设备。']) : '',
 			E('div', { 'class': 'wgm-dialog-actions right' }, [E('button', { 'class': 'btn cbi-button', click: ui.hideModal }, ['取消']),
 				E('button', { 'class': 'btn cbi-button cbi-button-positive', click: L.bind(function() {
 					this.preview(p ? 'edit' : 'create', p ? p.id : '', { name: name.value.trim(), address: address.value.trim() });
@@ -236,16 +245,28 @@ return view.extend({
 		if (!this.canManage()) return;
 		var s = this.data.settings, host = input(s.endpoint, 'vpn.example.com'), dns = input(s.dns.join(', '), '可留空');
 		var routes = input(s.routes.join(', ')), keepalive = input(String(s.keepalive));
+		var routeMode = E('select', { 'class': 'cbi-input-select' }, [
+			E('option', { value: 'auto' }, ['自动跟随 wg 与 LAN 网段']), E('option', { value: 'custom' }, ['自定义路由'])]);
+		routeMode.value = s.routes_mode || 'custom';
+		var customRoutes = routes.value;
+		routes.addEventListener('input', function() { if (!routes.disabled) customRoutes = routes.value; });
+		var updateRoutes = L.bind(function() {
+			routes.disabled = routeMode.value === 'auto';
+			routes.value = routes.disabled ? (this.data.default_routes || []).join(', ') : customRoutes;
+		}, this);
+		routeMode.addEventListener('change', updateRoutes); updateRoutes();
+		this.routeModeField = routeMode; this.autoRoutesField = routes;
 		keepalive.type = 'number'; keepalive.min = 0; keepalive.max = 65535;
 		ui.showModal('客户端导出设置', [field('公网域名或 IPv4', host, '不带协议或端口，固定使用现有 UDP 51820'),
 			field('客户端 DNS', dns, 'IPv4 地址，用逗号分隔；留空沿用客户端原 DNS'),
-			field('客户端 AllowedIPs', routes, '默认只访问家庭网段；填写 0.0.0.0/0 会要求客户端所有 IPv4 流量走 VPN，需现有服务端配置支持'),
+			field('客户端路由模式', routeMode, '自动模式使用当前 wg 和 LAN 网段；已有手动设置在升级后保留为自定义'),
+			field('客户端 AllowedIPs', routes, '自动模式随接口变化；自定义可填写 0.0.0.0/0 让全部 IPv4 走 VPN，需服务端支持转发'),
 			field('PersistentKeepalive（秒）', keepalive, '默认 25；只写入下载的客户端配置'),
 			E('p', {}, ['保存后只影响之后的配置下载。已导入的客户端须重新导入才能采用新设置。']),
 			E('div', { 'class': 'wgm-dialog-actions right' }, [E('button', { 'class': 'btn cbi-button', click: ui.hideModal }, ['取消']),
 				E('button', { 'class': 'btn cbi-button cbi-button-positive', click: L.bind(function() {
 					this.preview('settings', '', { endpoint: host.value.trim(), dns: listValue(dns.value),
-						routes: listValue(routes.value), keepalive: Number(keepalive.value) });
+						routes: listValue(routes.value), routes_mode: routeMode.value, keepalive: Number(keepalive.value) });
 				}, this) }, ['预览保存'])])]);
 	},
 	preview: function(action, id, payload) {

@@ -1,0 +1,15 @@
+0.4.0 static checks only; no functional tests or target-device validation performed.
+
+1. Pinned ucode 3f64c8089bf3ea4847c96b91df09fbfcaec19e1d compiler:
+   Compiled cli.uc together with its core.uc and platform.uc source imports to bytecode.
+   Exit status: 0. Output size: 120509 bytes.
+   fs/uci native dependency names were represented by .so path placeholders for compile-only resolution.
+   No bytecode was executed; native filesystem/UCI bindings were not loaded or validated.
+   Host-only compiler build used local json-c paths and a macOS SDK availability-warning adjustment.
+
+2. node --check dashboard.js: exit status 0.
+3. node --check scripts/build_preview.cjs: exit status 0.
+4. Python compile-only for the updated existing platform adapter fixture: exit status 0.
+
+These results do not validate address allocation, network transitions, rollback, ACLs or real LuCI behavior.
+Previous 135 passing checks in 0.3.0 remain historical and are not counted for 0.4.0.

@@ -88,7 +88,7 @@ else:
 '''.replace('REAL_WG',repr(REAL_WG)))
     mock.chmod(0o700)
     mock_ip = base/'mock-ip'
-    mock_ip.write_text("#!/bin/sh\nprintf '%s\\n' '192.168.66.0/24 proto kernel scope link src 192.168.66.1'\n")
+    mock_ip.write_text("#!/bin/sh\ncase \" $* \" in *' address '*) printf '%s\\n' '    inet 192.168.66.1/24 scope global wg';; *) printf '%s\\n' '192.168.66.0/24 proto kernel scope link src 192.168.66.1';; esac\n")
     mock_ip.chmod(0o700)
     options = dict(data_dir=str(base/'data'), runtime_dir=str(base/'run'), confdir=str(conf),
                    wg_binary=str(mock), ip_binary=str(mock_ip), qr_binary=QRENCODE, sync_binary='/bin/sync')
