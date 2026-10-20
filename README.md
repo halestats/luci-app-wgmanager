@@ -4,13 +4,13 @@
 
 **当前版本：0.3.1-1 · Apache-2.0**
 
-[下载安装包](downloads/v0.3.1/luci-app-wgmanager_0.3.1-1_all.ipk?raw=true) · [源码分享包](downloads/v0.3.1/luci-app-wgmanager-GitHub-0.3.1.zip?raw=true) · [版本说明](docs/RELEASE-0.3.1.md) · [常见问题](docs/FAQ.md) · [检查记录](docs/TEST-RESULTS.md)
+[下载安装包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.3.1/luci-app-wgmanager_0.3.1-1_all.ipk) · [源码分享包](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.3.1/luci-app-wgmanager-GitHub-0.3.1.zip) · [版本说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/RELEASE-0.3.1.md) · [常见问题](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/FAQ.md) · [检查记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)
 
 > **请先核对适用条件。** 当前是针对既有 iStoreOS 部署开发的版本，接口、端口、地址池仍固定在代码中；不是自动搭建 WireGuard 的通用安装器。安装不会创建接口、开放防火墙或配置 NAT。
 
-![桌面界面演示](docs/images/dashboard-desktop.png)
+![桌面界面演示](https://raw.githubusercontent.com/halestats/luci-app-wgmanager/main/docs/images/dashboard-desktop.png)
 
-*截图为 0.3.0 离线演示（0.3.1 布局相同），所有数据均为测试数据，不代表真实设备或客户端在线情况。[手机布局](docs/images/dashboard-mobile.png) · 下载 [离线交互预览](docs/preview.html?raw=true) 后用浏览器打开。*
+*截图为 0.3.0 离线演示（0.3.1 布局相同），所有数据均为测试数据，不代表真实设备或客户端在线情况。[手机布局](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/images/dashboard-mobile.png) · 下载 [离线交互预览](https://github.com/halestats/luci-app-wgmanager/releases/download/v0.3.1/WireGuard-Manager-0.3.1-preview.html) 后用浏览器打开。*
 
 ## 功能
 
@@ -36,6 +36,17 @@
 | 依赖 | luci-base、rpcd、ucode、ucode-mod-fs、ucode-mod-uci、wireguard-tools、qrencode |
 
 IPK 的 `all` 表示插件无架构专用二进制；依赖必须由固件对应的软件源提供，不等于所有 OpenWrt 版本均已验证。不要为满足条件而直接套用这些地址或伪造客户端；其他部署需要先适配源码并验证。
+
+## 地址与路由能否自定义？
+
+| 设置 | 0.3.1 当前行为 |
+| --- | --- |
+| 服务端地址 | 在 iStoreOS 的网络接口页面配置；插件目前仍只接受 `wg` 的 `192.168.66.1/24`，没有自动适配其他地址 |
+| 客户端地址池 | 固定 `192.168.66.2–254`；可在这个池内手工指定单个客户端地址，不能在界面改成其他网段 |
+| 导出 AllowedIPs | 可在“导出设置”自定义 IPv4 CIDR，包括实际 LAN 网段或 `0.0.0.0/0`；不是服务端地址池 |
+| 新增弹窗的地址提示 | 当前是固定文字，不会跟随 `wg` 地址变化 |
+
+当前实现只读取接口配置并检查是否符合固定条件，尚未根据接口地址推导分配网段。若在 iStoreOS 修改 `wg` 地址，插件不会自动迁移客户端或更新提示，网段不匹配会阻止管理操作。接口 IP 变化后自动推导地址池并同步提示，需要后续适配；不要将这个预期当成 0.3.1 已实现的功能。详见 [地址配置说明](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/ADDRESS-CONFIGURATION.md)。
 
 ## 安装
 
@@ -138,18 +149,18 @@ WGM_DIST="$PWD/dist" python3 scripts/build_ipk.py
 e24736c38474c450182fac4ecb47325b7ab40d6b557e27db6b3efe991d807eb3
 ```
 
-[目录说明与发布清单](docs/GITHUB-PUBLISH.md) · [测试方法](docs/TESTING.md) · [更新记录](CHANGELOG.md) · [安全设计与历史审查](docs/SECURITY-REVIEW.md)
+[目录说明与发布清单](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/GITHUB-PUBLISH.md) · [测试方法](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TESTING.md) · [更新记录](https://github.com/halestats/luci-app-wgmanager/blob/main/CHANGELOG.md) · [安全设计与历史审查](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/SECURITY-REVIEW.md)
 
 ## 验证范围
 
-0.3.1 本次移除数量门槛并同步状态校验，未运行功能测试或设备验收。保留的 135 项检查记录属于 0.3.0，不能作为 0.3.1 已通过的结果。0.2.6 新客户端管理曾获目标 iStoreOS 用户正常使用反馈。详见 [按版本记录](docs/TEST-RESULTS.md)。
+0.3.1 本次移除数量门槛并同步状态校验，未运行功能测试或设备验收。保留的 135 项检查记录属于 0.3.0，不能作为 0.3.1 已通过的结果。0.2.6 新客户端管理曾获目标 iStoreOS 用户正常使用反馈。详见 [按版本记录](https://github.com/halestats/luci-app-wgmanager/blob/main/docs/TEST-RESULTS.md)。
 
 ## 反馈与贡献
 
 请在本仓库 Issues 提供插件版本、固件版本、脱敏后的 `wgmanager doctor` 输出、复现步骤及界面截图。不要上传私钥、PSK、二维码、完整客户端配置、原始 `wg show ... dump`、`state.json` 或接管备份。
 
-欢迎提出接口/网段可配置化、解除定制基线、IPv6 等适配建议。变更请说明适用环境及验证范围。
+欢迎提出接口/网段自动适配、地址池可配置化、IPv6 等适配建议。变更请说明适用环境及验证范围。
 
 ## 许可证与致谢
 
-采用 [Apache License 2.0](LICENSE)。界面布局参考 [wg-easy](https://github.com/wg-easy/wg-easy)，本项目使用原生 LuCI/ucode 实现；不属于 WireGuard、OpenWrt、iStoreOS 或 wg-easy 官方项目。
+采用 [Apache License 2.0](https://github.com/halestats/luci-app-wgmanager/blob/main/LICENSE)。界面布局参考 [wg-easy](https://github.com/wg-easy/wg-easy)，本项目使用原生 LuCI/ucode 实现；不属于 WireGuard、OpenWrt、iStoreOS 或 wg-easy 官方项目。
