@@ -1,0 +1,23 @@
+luci-app-wgmanager_0.2.0-1_all.ipk: 22980 bytes, SHA256 b87538345c9fe4857f2e49ac899008d31796a7c155f38712a5dafadc7a000ba4
+luci-app-wgmanager_0.2.0-1_all.ipk: 22980 bytes, SHA256 b87538345c9fe4857f2e49ac899008d31796a7c155f38712a5dafadc7a000ba4
+ok 1 - IPK rebuild is byte-for-byte deterministic
+ok 2 - OpenWrt gzip/tar IPK envelope
+ok 3 - exactly three IPK envelope members
+ok 4 - debian-binary marker is correct
+ok 5 - no preinst, postinst or postrm scripts
+ok 6 - package name/version/architecture match release
+ok 7 - all target runtime dependencies declared
+ok 8 - remove script stops only this plugin sampler
+ok 9 - remove script has executable mode
+ok 10 - no path traversal or linked payload files
+ok 11 - no network/firewall/UCI configuration payload
+ok 12 - installed private data directory is 0700
+ok 13 - all RPC, CLI, init and hotplug executables have correct modes
+ok 14 - status ACL grants only the filtered status method
+ok 15 - secret export requires separate write ACL
+ok 16 - ACL grants no wildcard, file, UCI or generic execution methods
+ok 17 - native UCI cursor is read-only
+ok 18 - live updates use a single peer, with no interface/firewall reset commands
+ok 19 - hotplug restores only after the existing wg interface is up
+ok 20 - private plugin state is included in normal sysupgrade preservation
+PASS 20 package/archive/safety checks; target opkg installation not yet verified

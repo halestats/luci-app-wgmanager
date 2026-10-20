@@ -1,0 +1,25 @@
+ok 1 - dashboard boots under LuCI API shim
+ok 2 - all original clients render
+ok 3 - new-client button disabled in initial monitor stage
+ok 4 - original client exposes details only
+ok 5 - IPv4 sorting compares addresses rather than CIDR suffix
+ok 6 - download rate follows server TX deltas
+ok 7 - poll error marks stale data
+ok 8 - first sample after failed polling has no rate spike
+ok 9 - routine status polling never requests secrets
+ok 10 - mobile dashboard has no horizontal overflow
+ok 11 - preview does not apply a live change
+ok 12 - new client appears after confirmed action
+ok 13 - double click submits exactly once
+ok 14 - client names render as text, without HTML execution
+ok 15 - download uses a .conf attachment filename
+ok 16 - downloaded configuration contains selected client address
+ok 17 - closing secret dialog clears text and QR source
+ok 18 - disabled client stays listed with reserved address
+ok 19 - edited address and name render
+ok 20 - delete preview explains loss of stored client key
+ok 21 - delete retains all three originals
+ok 22 - search filters client cards
+ok 23 - dark theme toggles
+ok 24 - no browser JavaScript errors: 
+PASS 24 browser interaction/layout checks (LuCI API shim)

@@ -1,0 +1,12 @@
+PASS three fixture peers before test
+PASS real wg dump off parsed as numeric zero
+PASS create reaches real WireGuard kernel
+PASS edit changes only new peer address in kernel
+PASS configuration export and real qrencode succeed
+PASS real kernel disable
+PASS real kernel enable
+PASS real kernel delete
+PASS all three original fixture peers remain byte-equivalent
+PASS server identity and listen port preserved
+PASS network configuration file stays byte-identical
+PASS healthy final state with no managed test peer

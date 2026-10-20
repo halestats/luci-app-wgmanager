@@ -1,0 +1,20 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');let {harness}=require('./ui_test.cjs');
+const css=fs.readFileSync(path.join(__dirname,'../root/www/luci-static/resources/wgmanager/dashboard.css'),'utf8');
+harness=harness.replace("resource:()=>'/style.css'",'resource:()=>'+JSON.stringify('data:text/css;charset=utf-8,'+encodeURIComponent(css)+'#'));
+(async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.WGM_TEST_CHROME,args:['--disable-gpu']});let n=0;const check=(ok,label)=>{assert.ok(ok,label);console.log(`ok ${++n} - ${label}`);};try{
+ const page=await b.newPage();await page.setContent(harness);await page.waitForFunction(()=>window.ready);
+ await page.evaluate(()=>{mock.mode='manage';mock.existingManagement=true;mock.peers.forEach((p,i)=>Object.assign(p,{id:'original-'+i,name:'original-'+i,managed:true,protected:false,legacy:true,exportable:false}));mock.peers.push({...mock.peers[0],id:'new-client',name:'new-client',public_key:btoa('new-client'.padEnd(32,'0')),allowed_ips:['192.168.66.5/32'],legacy:false,exportable:true});return app.reload();});
+ const old=()=>page.locator('.wgm-peer').filter({hasText:'original-0'});
+ check((await page.locator('.wgm-banner').textContent()).includes('已开放原有客户端管理'),'banner reflects explicit existing-peer management');
+ check(await old().locator('.wgm-actions button').count()===4&&await old().locator('.wgm-actions button').evaluateAll(bs=>bs.every(b=>!b.disabled)),'original client has enabled details/edit/disable/delete controls');
+ check(await old().getByRole('button',{name:'二维码 / 配置',exact:true}).count()===0,'original private-key export is unavailable');
+ check(await page.locator('.wgm-peer').filter({hasText:'new-client'}).getByRole('button',{name:'二维码 / 配置',exact:true}).isEnabled(),'new plugin client retains QR/config export');
+ await old().getByRole('button',{name:'详情',exact:true}).click();check((await page.locator('#modal').textContent()).includes('私钥不在路由器'),'details explain the original private-key limitation');await page.getByRole('button',{name:'关闭',exact:true}).click();
+ await old().getByRole('button',{name:'编辑',exact:true}).click();await page.locator('#modal input').nth(0).fill('renamed-original');await page.locator('#modal input').nth(1).fill('192.168.66.8');await page.getByRole('button',{name:'预览变更',exact:true}).click();await page.getByRole('button',{name:'确认执行',exact:true}).click();
+ const card=()=>page.locator('.wgm-peer').filter({hasText:'renamed-original'});await card().waitFor();check((await card().textContent()).includes('192.168.66.8/32'),'original edit submits through preview/apply');
+ await card().getByRole('button',{name:'禁用',exact:true}).click();await page.getByRole('button',{name:'确认执行',exact:true}).click();await card().getByRole('button',{name:'启用',exact:true}).waitFor();check((await card().textContent()).includes('已禁用'),'original disable keeps client visible');
+ await card().getByRole('button',{name:'启用',exact:true}).click();await page.getByRole('button',{name:'确认执行',exact:true}).click();await card().getByRole('button',{name:'禁用',exact:true}).waitFor();
+ await card().getByRole('button',{name:'删除',exact:true}).click();check((await page.locator('#modal').textContent()).includes('持久配置'),'original deletion preview explains persistent removal');await page.getByRole('button',{name:'确认执行',exact:true}).click();await page.waitForFunction(()=>mock.peers.length===3);check(await card().count()===0,'original delete removes only selected client from the list');
+ console.log(`PASS ${n} existing-peer UI checks (simulated RPC)`);
+}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

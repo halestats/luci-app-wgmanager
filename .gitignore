@@ -1,0 +1,30 @@
+# Generated build files and local dependencies
+/dist/
+*.ipk
+__pycache__/
+*.py[cod]
+node_modules/
+.venv/
+.env
+.env.*
+.DS_Store
+*.swp
+
+# Never commit router runtime data or exported client secrets
+state.json
+traffic.json
+journal.json
+collector.json
+*.plan
+*.conf
+*.key
+*.psk
+*.pem
+
+# Local test output; approved sanitized logs live in docs/test-results/
+/test-results/
+/test-screenshots/
+/upstream/
+
+# Approved public release packages are intentionally versioned here.
+!/downloads/v*/luci-app-wgmanager_*.ipk

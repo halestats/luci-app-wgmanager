@@ -1,0 +1,9 @@
+#!/bin/sh
+# Uninstall/upgrade only: stop this package's optional statistics sampler.
+# Never remove live WireGuard peers or touch other init scripts.
+[ -n "$IPKG_INSTROOT" ] && exit 0
+if [ -x /etc/init.d/wgmanager ]; then
+	/etc/init.d/wgmanager stop >/dev/null 2>&1
+	[ "$1" != remove ] || /etc/init.d/wgmanager disable >/dev/null 2>&1
+fi
+exit 0

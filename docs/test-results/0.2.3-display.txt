@@ -1,0 +1,5 @@
+PASS version badge reflects refreshed backend version
+PASS missing version is explicit
+PASS stale handshake zeroes rates and clears trend even when counters grow
+PASS mobile dark layout shows version without horizontal overflow
+PASS no browser script errors

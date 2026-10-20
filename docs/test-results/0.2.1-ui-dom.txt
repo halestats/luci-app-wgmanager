@@ -1,0 +1,27 @@
+ok 1 - view boots with DOM/LuCI API shim
+ok 2 - renders all three existing clients
+ok 3 - initial mode disables creation
+ok 4 - protected clients expose no lifecycle or secret-export controls
+ok 5 - IPv4 sort does not sort the /32 suffix
+ok 6 - client download uses server TX delta
+ok 7 - poll failure labels displayed data stale
+ok 8 - recovery from polling error suppresses bandwidth spike
+ok 9 - status polling does not fetch client secrets
+ok 10 - preview performs no apply RPC
+ok 11 - rapid duplicate submit is sent once
+ok 12 - confirmed new client is shown
+ok 13 - untrusted name remains plain text
+ok 14 - secret fetched only into explicit export dialog
+ok 15 - configuration download uses .conf filename
+ok 16 - download blob preserves exported configuration
+ok 17 - close wipes private config and QR source from hidden modal
+ok 18 - disabled client stays listed and can be enabled
+ok 19 - edit updates displayed name and address
+ok 20 - delete preview identifies stored-key deletion
+ok 21 - delete keeps the three originals
+ok 22 - search filters the requested client
+ok 23 - export settings are sent through preview and apply
+ok 24 - stale apply errors are visible and do not create a client
+ok 25 - theme control toggles the intended class
+ok 26 - no JavaScript/DOM execution errors: 
+PASS 26 DOM interaction checks; layout/native LuCI not validated

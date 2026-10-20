@@ -1,0 +1,4 @@
+Expected baseline failure using 0.2.5 production view with LuCI attribute semantics.
+ok 1 - view starts
+managed buttons: [{"text":"详情","disabled":false,"attribute":null},{"text":"二维码 / 配置","disabled":true,"attribute":"false"},{"text":"编辑","disabled":true,"attribute":"false"},{"text":"禁用","disabled":true,"attribute":"false"},{"text":"删除","disabled":true,"attribute":"false"}]
+AssertionError [ERR_ASSERTION]: all five managed controls are enabled without a disabled attribute

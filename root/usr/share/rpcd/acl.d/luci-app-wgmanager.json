@@ -1,0 +1,14 @@
+{
+  "luci-app-wgmanager": {
+    "description": "Read WireGuard Manager status without keys",
+    "read": { "ubus": { "wgmanager": ["status"] } }
+  },
+  "luci-app-wgmanager-manage": {
+    "description": "Manage plugin clients and explicitly adopted UCI peers",
+    "write": { "ubus": { "wgmanager": ["prepare", "apply"] } }
+  },
+  "luci-app-wgmanager-secrets": {
+    "description": "Export plugin client private keys and QR codes",
+    "write": { "ubus": { "wgmanager": ["export"] } }
+  }
+}

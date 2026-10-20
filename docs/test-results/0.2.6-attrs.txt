@@ -1,0 +1,9 @@
+ok 1 - view starts
+managed buttons: [{"text":"详情","disabled":false,"attribute":null},{"text":"二维码 / 配置","disabled":false,"attribute":null},{"text":"编辑","disabled":false,"attribute":null},{"text":"禁用","disabled":false,"attribute":null},{"text":"删除","disabled":false,"attribute":null}]
+ok 2 - all five managed controls are enabled without a disabled attribute
+ok 3 - busy mode disables management and export
+ok 4 - busy reset omits attributes and restores controls
+ok 5 - read-only permits explicit export but blocks lifecycle changes
+ok 6 - drift still blocks lifecycle changes
+ok 7 - a successful status refresh removes clients absent from the backend
+PASS 7 LuCI attribute and status consistency checks

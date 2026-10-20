@@ -1,0 +1,8 @@
+{
+  "admin/services/wgmanager": {
+    "title": "WireGuard Manager",
+    "order": 93,
+    "action": { "type": "view", "path": "wgmanager/dashboard" },
+    "depends": { "acl": ["luci-app-wgmanager"] }
+  }
+}

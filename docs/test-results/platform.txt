@@ -1,0 +1,37 @@
+ok 1 - native platform lifecycle completed: { "ok": true, "final_count": 3, "id": "pb98b5b2e6ae1bf127f46dcdd" }
+ok 2 - native UCI read leaves entire network file byte-identical
+ok 3 - all 3 original runtime peers and server identity preserved
+ok 4 - delete clears managed secret and finished journal
+ok 5 - private directories are 0700
+ok 6 - all state, plans, counters and locks are 0600
+ok 7 - private temporary files removed
+ok 8 - shell metacharacters in client name are inert
+ok 9 - public status contains no server/client private key or PSK
+ok 10 - exported key derives the actual managed public key using real wg
+ok 11 - all 5 live mutations target only the managed public key
+ok 12 - no private key appears in process arguments
+ok 13 - legacy key never appears as mutation target
+ok 14 - legacy key never appears as mutation target
+ok 15 - legacy key never appears as mutation target
+ok 16 - real qrencode SVG decodes back to the exact exported configuration
+ok 17 - RPC wrapper exits cleanly
+ok 18 - RPC exposes no generic shell, UCI, interface-start or management-unlock method
+ok 19 - RPC wrapper exits cleanly
+ok 20 - RPC status filters secrets
+ok 21 - RPC wrapper exits cleanly
+ok 22 - RPC rejects arbitrary execution method
+ok 23 - RPC wrapper exits cleanly
+ok 24 - RPC refuses path traversal in preview token
+ok 25 - RPC wrapper exits cleanly
+ok 26 - RPC enforces request size before parsing
+ok 27 - RPC wrapper exits cleanly
+ok 28 - RPC refuses legacy/missing private-key export
+ok 29 - RPC wrapper exits cleanly
+ok 30 - RPC cannot bypass the local management gate
+ok 31 - first independent process holds lock
+ok 32 - second process fails closed on lock contention
+ok 33 - lock releases on process exit
+ok 34 - world-readable secret state is refused
+ok 35 - symlink state is refused
+ok 36 - all error cases preserve original network file
+PASS 36 native platform/crypto/QR checks

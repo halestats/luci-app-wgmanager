@@ -1,0 +1,10 @@
+ok 1 - banner reflects explicit existing-peer management
+ok 2 - original client has enabled details/edit/disable/delete controls
+ok 3 - original private-key export is unavailable
+ok 4 - new plugin client retains QR/config export
+ok 5 - details explain the original private-key limitation
+ok 6 - original edit submits through preview/apply
+ok 7 - original disable keeps client visible
+ok 8 - original deletion preview explains persistent removal
+ok 9 - original delete removes only selected client from the list
+PASS 9 existing-peer UI checks (simulated RPC)

@@ -1,0 +1,41 @@
+ok 1 - strict IPv4, CIDR and canonical keys
+ok 2 - fresh monitor lists all 3 peers and has zero write operations
+ok 3 - status and errors do not disclose private keys or PSKs
+ok 4 - write methods fail closed in monitor mode
+ok 5 - enable captures baseline without changing any peer
+ok 6 - missing expected legacy clients blocks first enable
+ok 7 - create allocates .5 and targets only new peer
+ok 8 - disabled UCI addresses remain reserved even with no live endpoint
+ok 9 - broad legacy AllowedIPs cannot be stolen
+ok 10 - kernel-only AllowedIPs are reserved
+ok 11 - explicit IP conflict and newline name rejected without commands
+ok 12 - unknown fields cannot override generated public keys
+ok 13 - lifecycle edit, disable, enable, delete retains legacy peers
+ok 14 - disabled managed IP remains reserved
+ok 15 - metadata-only edit makes no wg call
+ok 16 - legacy keys and made-up ids cannot be deleted or exported
+ok 17 - session-bound, single-use, expiring previews
+ok 18 - stale revision rejects a concurrent second preview
+ok 19 - IP claimed between preview and apply is rejected
+ok 20 - server identity, port, route and protected-set changes freeze mutations
+ok 21 - external edits to a managed peer block destructive changes
+ok 22 - journal save failure happens before any live mutation
+ok 23 - wg failure rolls back exactly one new key
+ok 24 - post-write verification failure rolls back
+ok 25 - state save failure after a live add removes only the new peer
+ok 26 - rollback failure retains journal, blocks writes, and explicit recovery repairs it
+ok 27 - settings are config-injection safe and never call wg set
+ok 28 - restore adds missing plugin peers and is idempotent
+ok 29 - restore validates all conflicts before its first command
+ok 30 - fresh install restore is a no-op on an absent interface
+ok 31 - sampling handles increments, counter reset and reboot without negative deltas
+ok 32 - corrupt state is never silently replaced with empty state
+ok 33 - corrupt manage mode without pinned server identity is refused
+ok 34 - recovery refuses management data edited outside the transaction
+ok 35 - existing-peer adoption requires the already-enabled manage gate
+ok 36 - existing-peer adoption preserves live state and removes only the original protection
+ok 37 - unsupported original routes leave adoption fully unchanged
+ok 38 - duplicate original public keys refuse adoption
+ok 39 - original runtime differences refuse adoption
+ok 40 - adoption save failure changes no original peer or source configuration
+PASS 40 policy/transaction tests

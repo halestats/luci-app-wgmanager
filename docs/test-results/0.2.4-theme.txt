@@ -1,0 +1,8 @@
+ok 1 - production view boots
+ok 2 - light headings remain transparent under overriding theme styles
+ok 3 - dark headings remain transparent under overriding theme styles
+ok 4 - monitor banner gives the actual management unlock command
+ok 5 - read-only mode retains the management gate
+ok 6 - creation becomes available with manage mode
+ok 7 - original clients retain details-only controls
+PASS 7 theme and mode checks (simulated LuCI RPC; no router changes)

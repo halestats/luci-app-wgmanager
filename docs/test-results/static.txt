@@ -1,0 +1,5 @@
+PASS JavaScript syntax: node --check dashboard.js
+PASS shellcheck 0.9.0: preflight, prerm, CLI, collector, init, hotplug
+PASS BusyBox 1.36.1: IPK envelope archive readable; sync -f capability present in tested build
+NOT RUN on target: opkg install, actual WireGuard kernel netlink, LuCI sessions/theme, reboot restoration
+NOT PASSED: Chrome rendering test blocked at launch by local socket permissions; DOM checks are separately reported

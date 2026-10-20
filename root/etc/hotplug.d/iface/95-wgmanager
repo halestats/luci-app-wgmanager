@@ -1,0 +1,6 @@
+#!/bin/sh
+# Never bring interfaces up or down. Only restore plugin-owned peers AFTER
+# netifd has brought the existing interface up of its own accord.
+[ "$ACTION" = ifup ] && [ "$INTERFACE" = wg ] || exit 0
+/usr/sbin/wgmanager restore >/dev/null 2>&1 ||
+	logger -t wgmanager 'Managed peers not restored; inspect with wgmanager doctor'

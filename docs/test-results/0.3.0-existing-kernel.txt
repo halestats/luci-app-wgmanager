@@ -1,0 +1,30 @@
+{ "ok": true, "data": { "mode": "manage", "protected_count": 3, "revision": 1 } }
+ok 1 - adopt three original peers alongside an existing plugin peer
+ok 2 - adoption changes no live peers or network configuration
+ok 3 - pre-adoption backup is root-private 0600
+ok 4 - adoption is idempotent
+ok 5 - adopted status exposes controls without private-key export or drift
+ok 6 - reject NO_PRIVATE_KEY
+ok 7 - edit persists original name/address and updates the real kernel
+ok 8 - unrelated peer options survive edit
+ok 9 - disable persists and removes only selected original peer
+ok 10 - enable restores a peer with no PSK
+ok 11 - enable preserves original PSK and keepalive 25
+ok 12 - an originally disabled UCI peer can be enabled
+ok 13 - enable restores the configured original endpoint
+ok 14 - reject APPLY_FAILED
+ok 15 - failed state save rolls back both UCI and real kernel
+ok 16 - reject APPLY_FAILED
+ok 17 - UCI write failure restores the original live peer
+ok 18 - reject RECOVERY_REQUIRED
+ok 19 - incomplete rollback retains journal and blocks management
+ok 20 - explicit recovery restores both original persistent and live configuration
+ok 21 - reject PEER_DRIFT
+ok 22 - external target changes are rejected without disabling the live peer
+ok 23 - delete persists and removes only selected original peer
+ok 24 - the other enabled original peer remains unchanged
+ok 25 - server and unrelated interface configuration preserved
+ok 26 - final state healthy with two original peers and one plugin peer
+ok 27 - all three adopted originals may be removed without the old baseline lock
+ok 28 - management remains usable after deleting all adopted original clients
+PASS 28 isolated real-kernel existing-peer checks

@@ -1,0 +1,43 @@
+#!/usr/bin/ucode
+// SPDX-License-Identifier: Apache-2.0
+'use strict';
+import { stdin } from 'fs';
+import { manager, fail } from '/usr/share/wgmanager/core.uc';
+import { platform } from '/usr/share/wgmanager/platform.uc';
+
+const methods = {
+	status: { ubus_rpc_session: '' },
+	prepare: { action: '', peer_id: '', payload: '', ubus_rpc_session: '' },
+	apply: { token: '', ubus_rpc_session: '' },
+	export: { peer_id: '', qr: true, ubus_rpc_session: '' }
+};
+
+if (ARGV[0] == 'list') { printf('%J\n', methods); exit(0); }
+let io;
+try {
+	if (ARGV[0] != 'call' || !methods[ARGV[1]]) fail('INVALID_METHOD', '不支持的 RPC 方法');
+	let body = stdin.read(8193);
+	if (!body || length(body) > 8192) fail('INVALID_INPUT', '请求为空或过大');
+	let args = json(body);
+	if (type(args) != 'object') fail('INVALID_INPUT', '请求须为 JSON 对象');
+	// rpcd/uhttpd supplies the authenticated session field. Local ubus calls
+	// without a session are trusted root IPC, and share the local owner label.
+	let owner = args.ubus_rpc_session ?? 'local-root';
+	if (type(owner) != 'string' || length(owner) > 64) fail('INVALID_SESSION', '会话标识无效');
+	io = platform(); io.lock();
+	let api = manager(io), result;
+	if (ARGV[1] == 'status') result = api.status();
+	else if (ARGV[1] == 'prepare') result = api.prepare(args, owner);
+	else if (ARGV[1] == 'apply') result = api.apply(args, owner);
+	else result = api.export_peer(args);
+	io.unlock();
+	printf('%J\n', { ok: true, data: result });
+}
+catch (e) {
+	io?.unlock();
+	let pieces = split(e.message ?? '', '|');
+	// Never forward a stack trace, command output, request body, or secrets.
+	let known = length(pieces) == 2 && match(pieces[0], /^[A-Z_]+$/);
+	printf('%J\n', { ok: false, error: { code: known ? pieces[0] : 'INTERNAL_ERROR',
+		message: known ? pieces[1] : '内部错误，原配置未被插件写入；请运行 wgmanager doctor' } });
+}
