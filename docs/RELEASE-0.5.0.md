@@ -11,7 +11,17 @@
 - 原 wg 沿用原目录，其他接口分目录保存；共用写锁避免 UCI 提交相互覆盖。ifup 恢复只操作对应接口，采样覆盖全部接口。
 - 调整检查顺序，先明确指出未应用地址，再报告缺失直连路由。
 
-## 升级
+## 安装或升级
+
+已有 opkg 和 LuCI 的环境，可先在 SSH 一条命令准备依赖：
+
+```sh
+opkg update && opkg install rpcd ucode ucode-mod-fs ucode-mod-uci wireguard-tools qrencode
+```
+
+使用当前固件匹配的软件源。opkg 按软件源处理所列组件及间接依赖；IPK 自身也声明了这些依赖。不同固件的预装情况不同。
+
+上传安装包至 /tmp 后：
 
 ```sh
 opkg install /tmp/luci-app-wgmanager_0.5.0-1_all.ipk

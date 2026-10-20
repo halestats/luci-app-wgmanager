@@ -7,3 +7,5 @@
 旧版本下载和 Release 保留。SOURCE-SHA256SUMS 反映主分支当前源码及文档，不包含 downloads、编译缓存及自身。
 
 不上传实际设备配置、state、私钥、PSK、二维码、完整客户端配置或接管备份。用户反馈只记为实际提供的整体运行反馈，不扩展成未执行的自动化或兼容性覆盖。
+
+安装文档和 Release 正文补充 `opkg update && opkg install rpcd ucode ucode-mod-fs ucode-mod-uci wireguard-tools qrencode`，方便已有 LuCI/opkg 的新系统准备依赖；本次只改说明，原附件和运行代码保持不变。

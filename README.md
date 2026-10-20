@@ -43,7 +43,25 @@
 
 ## 安装或升级
 
-下载 IPK 上传至 `/tmp`，使用当前固件匹配的软件源补齐依赖，然后执行：
+不同固件的预装组件不同。以下步骤适用于已有 `opkg` 和 LuCI 网页后台的 iStoreOS / OpenWrt 24.10 环境。
+
+### 第一步：一条命令准备基础依赖
+
+在路由器 SSH 终端复制执行：
+
+```sh
+opkg update && opkg install rpcd ucode ucode-mod-fs ucode-mod-uci wireguard-tools qrencode
+```
+
+`opkg update` 更新软件包索引；`opkg install` 按当前软件源安装所列组件并处理依赖，不需要分别执行六次。已满足要求的组件可复用，实际版本由软件源和 opkg 决定。安装依赖时使用与固件版本、架构匹配的原有软件源。
+
+IPK 本身也已声明这些依赖，软件源正常时直接安装 IPK 可自动补齐；这里单列命令方便新安装时先准备环境。`luci-base` 通常随 LuCI 已安装，也在插件的依赖列表中。`qrencode` 所需的 `libqrencode` 等间接依赖由 opkg 处理。
+
+如果出现 `Unknown package` 或下载失败，先核对设备联网和当前固件的软件源，再继续安装。
+
+### 第二步：安装插件并刷新 LuCI
+
+下载 IPK 并上传至 `/tmp`，执行：
 
 ```sh
 opkg install /tmp/luci-app-wgmanager_0.5.0-1_all.ipk
